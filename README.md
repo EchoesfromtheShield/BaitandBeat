@@ -64,14 +64,30 @@ The intended local Norns controls for early testing are:
 Genesis hardware code is deliberately not written yet. The USB transport and
 module pin map must be verified first.
 
-## Hardware Facts Needed Before Genesis Code
+## Genesis M0 Hardware Spike
 
-See `docs/HARDWARE_QUESTIONS.md`. The short version:
+Current known setup:
 
-- exact Genesis Mini board/model and MCU;
-- modules connected to it and their ports/pins;
-- USB mode visible from the computer and from Norns: CDC serial, USB MIDI, or
-  something else;
-- whether the Genesis Mini is powered by Norns USB host, a hub, or external
-  power.
+- Genesis Mini V1 Rev2, ESP32-S3-Mini-N4R2;
+- slot 1 rotary encoder;
+- slot 2 tactile LED button;
+- slot 3 vibration motor ERM;
+- PC serial port `COM20`.
 
+Build the first firmware spike:
+
+```powershell
+cd genesis\abyssal_line_controller
+python -m platformio run
+```
+
+Then upload and run the host test:
+
+```powershell
+python -m platformio run -t upload
+cd ..\..
+python tools\serial_spike_host.py --port COM20
+```
+
+The remaining unknown is whether Norns sees the Genesis Mini USB CDC serial
+device through its USB host port.

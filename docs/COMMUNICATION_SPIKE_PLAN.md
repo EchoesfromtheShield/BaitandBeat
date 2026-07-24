@@ -22,13 +22,14 @@ Only consider this if a single transport fails a clear requirement.
 
 ## Tests
 
-1. Enumeration on development computer.
-2. Enumeration on Norns.
-3. Genesis to Norns: `HELLO`, encoder delta, button event.
-4. Norns to Genesis: `HELLO_ACK`, `GAME_STATE`.
-5. Sustained rate: 2 Hz, 10 Hz, 30 Hz.
-6. Disconnect and reconnect.
-7. Version mismatch handling.
+1. Enumeration on development computer. Passed: `COM20`.
+2. Enumeration on Norns. Not tested.
+3. Genesis to host: `HELLO`. Passed on PC.
+4. Host to Genesis: `HELLO_ACK`, `GAME_STATE`, `PATTERN_EVENT`. Passed on PC.
+5. Physical inputs: encoder delta and button event. Not verified by Codex.
+6. Sustained rate: 2 Hz, 10 Hz, 30 Hz. 5 Hz synthetic PC test passed.
+7. Disconnect and reconnect. Not tested.
+8. Version mismatch handling. Not tested.
 
 ## Decision Criteria
 
@@ -61,4 +62,3 @@ Required fields:
 - remaining limitations;
 - minimal Norns code used;
 - minimal Genesis code used.
-

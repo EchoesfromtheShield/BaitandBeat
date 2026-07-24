@@ -1,27 +1,47 @@
 # Genesis Controller
 
-Hardware code intentionally starts after M0 enumeration and pin discovery.
+M0 hardware spike for Axiometa Genesis Mini V1 Rev2.
 
-The Genesis side should eventually own only:
+Connected modules:
 
-- encoder/button reading;
-- minimal OLED status;
-- LED matrix resonance or tension display;
-- transport adapter;
-- reconnection handshake.
+- slot 1: rotary encoder;
+- slot 2: tactile LED button;
+- slot 3: vibration motor ERM.
 
-It must not own:
+The separate LED button is the action input. The encoder press is unused in M0.
 
-- authoritative game state;
-- creature movement;
-- tension rules;
-- captured layer state;
-- musical decisions.
+## Build
 
-Before adding `.ino`, `HardwareConfig.h`, or library dependencies, fill in the
-facts listed in:
-
-```text
-docs/HARDWARE_QUESTIONS.md
+```powershell
+cd genesis\abyssal_line_controller
+python -m platformio run
 ```
 
+## Upload To Current PC Port
+
+```powershell
+cd genesis\abyssal_line_controller
+python -m platformio run -t upload
+```
+
+`platformio.ini` currently targets `COM20`.
+
+## Host Serial Test
+
+After uploading, run from the repo root:
+
+```powershell
+python tools\serial_spike_host.py --port COM20
+```
+
+Expected behavior:
+
+- Genesis sends repeated `HELLO` until `HELLO_ACK`.
+- Turning the encoder sends `INPUT_ENCODER_DELTA`.
+- Pressing the LED button sends `INPUT_BUTTON`.
+- The LED button blinks during resonance, lights in safe tension, and stays on
+  at surface.
+- The vibration motor pulses on connect, bite-ready, button press, and pattern
+  events.
+
+The Genesis side still does not own authoritative game state.

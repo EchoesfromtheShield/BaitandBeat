@@ -1,12 +1,12 @@
 # Hardware Questions Before Genesis Code
 
-Only these facts are required before writing Genesis hardware code.
+The first required facts are now recorded in `docs/HARDWARE_PROFILE.md`.
 
 ## Genesis Mini
 
-- Exact product name and revision.
-- MCU model, if known.
-- Firmware environment expected: Arduino, PlatformIO, CircuitPython, or other.
+- Answered: Axiometa Genesis Mini Version 1 Rev 2.
+- Answered: ESP32-S3-Mini-N4R2.
+- Current implementation path: PlatformIO + Arduino framework.
 
 ## Connected Modules
 
@@ -20,15 +20,15 @@ For each connected module:
 
 Minimum expected modules:
 
-- rotary encoder with push;
-- OLED display;
-- RGB LED matrix.
+- Answered: rotary encoder in slot 1;
+- Answered: tactile LED button in slot 2;
+- Answered: vibration motor ERM in slot 3.
+
+OLED and RGB LED matrix are not part of the current M0 wiring.
 
 ## USB Access
 
-- How the device appears on the development computer: COM port, USB MIDI
-  endpoint, HID, or other.
+- Answered: currently appears as `COM20` on the development computer.
 - VID/PID and device name, if visible.
-- Whether Norns sees it when plugged into the Norns USB host.
+- Still open: whether Norns sees it when plugged into the Norns USB host.
 - Whether power comes from Norns, a powered hub, or external power.
-
