@@ -19,11 +19,11 @@ Official references checked:
 
 ## Connected Modules
 
-| Physical slot | Module | M0 role |
+| Axiometa port | Module | M0 role |
 | --- | --- | --- |
-| Slot 1 | Rotary encoder | Depth/tension encoder |
-| Slot 2 | Tactile LED button | Cast/hook button and status LED |
-| Slot 3 | Vibration motor ERM | Fishing haptic feedback |
+| P1 | Rotary encoder | Depth/tension encoder |
+| P2 | Tactile LED button | Cast/hook button and status LED |
+| P3 | Vibration motor ERM | Fishing haptic feedback |
 
 The separate LED button is the M0 action button. The encoder press is not used.
 
@@ -42,15 +42,16 @@ Current Axiometa module reference:
 
 ## AX22 Port GPIO Map
 
-The Genesis Mini schematic shows shared SPI/I2C signals plus three slot-local
-GPIO lines per AX22 port.
+The Genesis Mini schematic shows shared SPI/I2C signals plus three local GPIO
+lines per AX22 port. The application uses the Axiometa `P*` port names because
+they match the working module examples.
 
 | Port | IO0/ADC | IO1/CS/PWM/TX | IO2/RX |
 | --- | --- | --- | --- |
-| 1 | GPIO9 | GPIO16 | GPIO15 |
-| 2 | GPIO1 | GPIO17 | GPIO18 |
-| 3 | GPIO7 | GPIO6 | GPIO5 |
-| 4 | GPIO4 | GPIO3 | GPIO2 |
+| P1 | GPIO9 | GPIO16 | GPIO15 |
+| P2 | GPIO7 | GPIO6 | GPIO5 |
+| P3 | GPIO4 | GPIO3 | GPIO2 |
+| P4 | GPIO1 | GPIO17 | GPIO18 |
 
 Shared AX22 bus lines:
 
@@ -64,23 +65,21 @@ Shared AX22 bus lines:
 
 ## M0 Pin Assignment
 
-The first probe session showed the LED button illuminating on the firmware label
-`slot3_io2` / GPIO5, not on the initial `slot2_io2` assumption. Until the full
-physical-port-to-GPIO map is verified, M0 uses the observed LED button mapping
-and keeps the ERM motor disabled.
+The first probe session showed the LED button illuminating on GPIO5. The
+working Axiometa test firmware identifies that same signal as `P2_IO2`; the old
+probe labels were therefore misleading, not the hardware.
 
-| Function | Slot | Module signal | GPIO |
+| Function | Port | Module signal | GPIO |
 | --- | --- | --- | --- |
-| Encoder A/CLK | 1 | IO1 | GPIO16 |
-| Encoder B/DT | 1 | IO2 | GPIO15 |
-| Encoder push | 1 | IO0 | GPIO9, unused |
-| Action button | observed LED-button port | IO1 | GPIO6, pending confirmation |
-| Button LED | observed LED-button port | IO2 | GPIO5, verified |
-| Vibration motor | pending | IO1 | disabled in M0 |
+| Encoder A/CLK | P1 | IO1 | GPIO16 |
+| Encoder B/DT | P1 | IO2 | GPIO15 |
+| Encoder push | P1 | IO0 | GPIO9, unused |
+| Action button | P2 | IO1 | GPIO6 |
+| Button LED | P2 | IO2 | GPIO5 |
+| Vibration motor | P3 | IO1 | GPIO3 |
 
-The ERM module should use pulses of at least 50 ms once its GPIO is known.
-Variable intensity can later use PWM; do not add it to M0 before basic
-serial/encoder/button/LED behavior is stable.
+The ERM module should use pulses of at least 50 ms. Variable intensity can later
+use PWM; M0 only uses simple HIGH/LOW pulses.
 
 ## Transport Assumption For First Test
 
@@ -94,6 +93,4 @@ The communication spike has proved:
 
 Open hardware confirmations:
 
-- encoder A/B movement on the final M0 firmware;
-- action button input on GPIO6;
-- ERM motor GPIO.
+- encoder, LED button, and ERM motor on the final Abyssal Line firmware.

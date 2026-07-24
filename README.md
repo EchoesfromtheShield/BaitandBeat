@@ -61,17 +61,18 @@ The intended local Norns controls for early testing are:
 - `K3`: cast or hook when the bite is ready.
 - `E3`: move the line depth.
 
-Genesis hardware code is deliberately not written yet. The USB transport and
-module pin map must be verified first.
+Genesis hardware code exists for the M0 communication spike. USB serial has
+been verified on the PC and on Norns; the corrected firmware uses Axiometa
+ports P1/P2/P3 for encoder, LED button, and ERM motor.
 
 ## Genesis M0 Hardware Spike
 
 Current known setup:
 
 - Genesis Mini V1 Rev2, ESP32-S3-Mini-N4R2;
-- slot 1 rotary encoder;
-- slot 2 tactile LED button;
-- slot 3 vibration motor ERM;
+- P1 rotary encoder;
+- P2 tactile LED button;
+- P3 vibration motor ERM;
 - PC serial port `COM20`.
 
 Build the first firmware spike:
@@ -89,5 +90,5 @@ cd ..\..
 python tools\serial_spike_host.py --port COM20
 ```
 
-The remaining unknown is whether Norns sees the Genesis Mini USB CDC serial
-device through its USB host port.
+Norns sees the Genesis Mini as `/dev/ttyACM0`. The next implementation step is
+the Norns-side serial adapter that streams authoritative `GAME_STATE` messages.

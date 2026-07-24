@@ -4,9 +4,9 @@ M0 hardware spike for Axiometa Genesis Mini V1 Rev2.
 
 Connected modules:
 
-- slot 1: rotary encoder;
-- slot 2: tactile LED button;
-- slot 3: vibration motor ERM.
+- P1: rotary encoder;
+- P2: tactile LED button;
+- P3: vibration motor ERM.
 
 The separate LED button is the action input. The encoder press is unused in M0.
 
@@ -41,8 +41,8 @@ Expected behavior:
 - Pressing the LED button sends `INPUT_BUTTON`.
 - The LED button blinks during resonance, lights in safe tension, and stays on
   at surface.
-- The vibration motor pulses on connect, bite-ready, button press, and pattern
-  events.
+- The vibration motor pulses on encoder movement, connect, bite-ready, button
+  press, and pattern events.
 
 The Genesis side still does not own authoritative game state.
 

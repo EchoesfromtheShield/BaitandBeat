@@ -77,17 +77,17 @@ def main() -> None:
     parser.add_argument("--baud", type=int, default=115200)
     parser.add_argument("--duration", type=float, default=10.0)
     parser.add_argument("--pulse", choices=[
-        "slot2_io0",
-        "slot2_io1",
-        "slot2_io2",
-        "slot3_io0",
-        "slot3_io1",
-        "slot3_io2",
-        "slot4_io0",
-        "slot4_io1",
-        "slot4_io2",
+        "p2_io0",
+        "p2_io1",
+        "p2_io2",
+        "p3_io0",
+        "p3_io1",
+        "p3_io2",
+        "p4_io0",
+        "p4_io1",
+        "p4_io2",
     ])
-    parser.add_argument("--scan", choices=["slot2", "slot3", "slot4"], help="Pulse every candidate pin in a slot.")
+    parser.add_argument("--scan", choices=["p2", "p3", "p4"], help="Pulse every candidate pin in an Axiometa port.")
     parser.add_argument("--level", choices=["HIGH", "LOW"], default="HIGH")
     parser.add_argument("--ms", type=int, default=1500)
     parser.add_argument("--snapshot", action="store_true")

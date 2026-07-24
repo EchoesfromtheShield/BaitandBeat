@@ -20,9 +20,9 @@ For each connected module:
 
 Minimum expected modules:
 
-- Answered: rotary encoder in slot 1;
-- Answered: tactile LED button in slot 2;
-- Answered: vibration motor ERM in slot 3.
+- Answered: rotary encoder on P1;
+- Answered: tactile LED button on P2;
+- Answered: vibration motor ERM on P3.
 
 OLED and RGB LED matrix are not part of the current M0 wiring.
 
@@ -30,5 +30,5 @@ OLED and RGB LED matrix are not part of the current M0 wiring.
 
 - Answered: currently appears as `COM20` on the development computer.
 - VID/PID and device name, if visible.
-- Still open: whether Norns sees it when plugged into the Norns USB host.
+- Answered: Norns sees it as `/dev/ttyACM0` when plugged into the Norns USB host.
 - Whether power comes from Norns, a powered hub, or external power.

@@ -1,7 +1,8 @@
 # Communication Spike Results
 
 Status: passed for USB serial transport on development PC and Norns. Physical
-module mapping is still partially open.
+module mapping is now known for the M0 modules and needs one final test on the
+Abyssal Line firmware.
 
 Date: 2026-07-24
 
@@ -19,9 +20,9 @@ Date: 2026-07-24
 
 Connected modules:
 
-- slot 1: rotary encoder;
-- slot 2: tactile LED button;
-- slot 3: vibration motor ERM.
+- P1: rotary encoder;
+- P2: tactile LED button;
+- P3: vibration motor ERM.
 
 ## Firmware
 
@@ -87,21 +88,23 @@ the firmware returns to discovery when it does not receive a live state stream.
 
 ## Physical Module Probe
 
-Current observed result:
+Observed result:
 
-- Button LED reacted on probe label `slot3_io2` / GPIO5.
-- ERM motor has not reacted on the tested pins.
+- Button LED reacted on GPIO5.
+- A separate Axiometa-generated firmware confirmed:
+  - encoder on `P1_IO1` / `P1_IO2`;
+  - LED button signal on `P2_IO1`;
+  - LED control on `P2_IO2`;
+  - ERM motor on `P3_IO1`.
 
-For the M0 firmware, haptics are disabled and the LED button uses the observed
-LED-button port. This keeps the communication spike moving while the exact ERM
-GPIO remains unresolved.
+The old `slotN_ioX` probe labels were misleading because they did not match the
+Axiometa physical port labels. The firmware now uses explicit `P1` / `P2` /
+`P3` assignments.
 
 ## Current Limitations
 
-- Physical encoder movement still needs verification on the final M0 firmware.
-- Physical LED button input still needs verification; LED output is verified on
-  GPIO5.
-- Haptic feedback is intentionally disabled in M0 until the ERM GPIO is found.
+- Physical encoder, LED button, and ERM motor need one verification pass on the
+  corrected M0 firmware.
 - Norns-side serial adapter is not committed yet.
 
 ## Selected Transport For Next Test

@@ -11,30 +11,30 @@ struct PinDef {
 };
 
 PinDef inputPins[] = {
-  {"slot1_io0", HardwareConfig::SLOT1_IO0},
-  {"slot1_io1", HardwareConfig::SLOT1_IO1},
-  {"slot1_io2", HardwareConfig::SLOT1_IO2},
-  {"slot2_io0", HardwareConfig::SLOT2_IO0},
-  {"slot2_io1", HardwareConfig::SLOT2_IO1},
-  {"slot2_io2", HardwareConfig::SLOT2_IO2},
-  {"slot3_io0", HardwareConfig::SLOT3_IO0},
-  {"slot3_io1", HardwareConfig::SLOT3_IO1},
-  {"slot3_io2", HardwareConfig::SLOT3_IO2},
-  {"slot4_io0", HardwareConfig::SLOT4_IO0},
-  {"slot4_io1", HardwareConfig::SLOT4_IO1},
-  {"slot4_io2", HardwareConfig::SLOT4_IO2},
+  {"p1_io0", HardwareConfig::AX_P1_IO0},
+  {"p1_io1", HardwareConfig::AX_P1_IO1},
+  {"p1_io2", HardwareConfig::AX_P1_IO2},
+  {"p2_io0", HardwareConfig::AX_P2_IO0},
+  {"p2_io1", HardwareConfig::AX_P2_IO1},
+  {"p2_io2", HardwareConfig::AX_P2_IO2},
+  {"p3_io0", HardwareConfig::AX_P3_IO0},
+  {"p3_io1", HardwareConfig::AX_P3_IO1},
+  {"p3_io2", HardwareConfig::AX_P3_IO2},
+  {"p4_io0", HardwareConfig::AX_P4_IO0},
+  {"p4_io1", HardwareConfig::AX_P4_IO1},
+  {"p4_io2", HardwareConfig::AX_P4_IO2},
 };
 
 PinDef outputPins[] = {
-  {"slot2_io0", HardwareConfig::SLOT2_IO0},
-  {"slot2_io1", HardwareConfig::SLOT2_IO1},
-  {"slot2_io2", HardwareConfig::SLOT2_IO2},
-  {"slot3_io0", HardwareConfig::SLOT3_IO0},
-  {"slot3_io1", HardwareConfig::SLOT3_IO1},
-  {"slot3_io2", HardwareConfig::SLOT3_IO2},
-  {"slot4_io0", HardwareConfig::SLOT4_IO0},
-  {"slot4_io1", HardwareConfig::SLOT4_IO1},
-  {"slot4_io2", HardwareConfig::SLOT4_IO2},
+  {"p2_io0", HardwareConfig::AX_P2_IO0},
+  {"p2_io1", HardwareConfig::AX_P2_IO1},
+  {"p2_io2", HardwareConfig::AX_P2_IO2},
+  {"p3_io0", HardwareConfig::AX_P3_IO0},
+  {"p3_io1", HardwareConfig::AX_P3_IO1},
+  {"p3_io2", HardwareConfig::AX_P3_IO2},
+  {"p4_io0", HardwareConfig::AX_P4_IO0},
+  {"p4_io1", HardwareConfig::AX_P4_IO1},
+  {"p4_io2", HardwareConfig::AX_P4_IO2},
 };
 
 constexpr uint8_t INPUT_PIN_COUNT = sizeof(inputPins) / sizeof(inputPins[0]);
@@ -330,7 +330,7 @@ void sendHello() {
     "HELLO",
     "{\"device_role\":\"genesis\",\"firmware\":\"abyssal-line-m0-serial\","
     "\"board\":\"genesis-mini-v1-rev2\","
-    "\"capabilities\":[\"encoder\",\"button_led\",\"usb_cdc_serial\"]}"
+    "\"capabilities\":[\"encoder\",\"button_led\",\"vibration\",\"usb_cdc_serial\"]}"
   );
 }
 
@@ -468,7 +468,7 @@ void pollButton() {
   sendButton(debouncedButton ? "press" : "release");
   if (debouncedButton) {
     pulseLed(80);
-    pulseMotor(30);
+    pulseMotor(HardwareConfig::BUTTON_PRESS_HAPTIC_MS);
   }
 }
 
@@ -483,6 +483,7 @@ void flushInputs() {
     const int delta = encoderAccumulator;
     encoderAccumulator = 0;
     sendEncoderDelta(delta);
+    pulseMotor(HardwareConfig::ENCODER_TICK_HAPTIC_MS);
   }
 }
 
@@ -562,7 +563,7 @@ void sendPeriodicHello() {
 void setup() {
   pinMode(HardwareConfig::ENCODER_A_PIN, INPUT_PULLUP);
   pinMode(HardwareConfig::ENCODER_B_PIN, INPUT_PULLUP);
-  pinMode(HardwareConfig::ACTION_BUTTON_PIN, INPUT_PULLUP);
+  pinMode(HardwareConfig::ACTION_BUTTON_PIN, INPUT);
   pinMode(HardwareConfig::ACTION_LED_PIN, OUTPUT);
   if (HardwareConfig::HAS_VIBRATION_MOTOR) {
     pinMode(HardwareConfig::VIBRATION_MOTOR_PIN, OUTPUT);
