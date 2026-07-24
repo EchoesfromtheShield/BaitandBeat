@@ -1,8 +1,7 @@
 # Communication Spike Results
 
 Status: passed for USB serial transport on development PC and Norns. Physical
-module mapping is now known for the M0 modules and needs one final test on the
-Abyssal Line firmware.
+module pin mapping is now known for the M0 modules.
 
 Date: 2026-07-24
 
@@ -111,15 +110,17 @@ Follow-up on the first corrected firmware test:
   `ENCODER_BUTTON_PRESS pin=4`.
 - M0 now uses `VIBRATION_MOTOR_PIN = 16` and prints `HAPTIC_PULSE` whenever it
   tries to drive the motor.
-- The old provisional encoder pin also used GPIO16, so encoder polling is
-  temporarily disabled in M0 until the numeric `P1_IO1` / `P1_IO2` values are
-  captured from Axiometa.
+- Full Axiometa `PINMAP_JSON` later confirmed:
+  - `P1_IO0=4`, `P1_IO1=3`, `P1_IO2=2`;
+  - `P2_IO0=7`, `P2_IO1=6`, `P2_IO2=5`;
+  - `P3_IO0=9`, `P3_IO1=16`, `P3_IO2=15`;
+  - `P4_IO0=1`, `P4_IO1=17`, `P4_IO2=18`.
+- Encoder polling is re-enabled in M0 with `P1_IO1` / `P1_IO2`.
 
 ## Current Limitations
 
-- LED button and ERM motor need one verification pass on the corrected M0
-  firmware.
-- Encoder CLK/DT numeric pins are still pending from Axiometa `PINMAP_BEGIN`.
+- Encoder, LED button, and ERM motor need one verification pass together on the
+  corrected M0 firmware.
 - Norns-side serial adapter is not committed yet.
 
 ## Selected Transport For Next Test

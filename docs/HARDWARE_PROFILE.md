@@ -42,17 +42,16 @@ Current Axiometa module reference:
 
 ## AX22 Port GPIO Map
 
-The Genesis Mini schematic shows shared SPI/I2C signals plus three local GPIO
-lines per AX22 port, but the local PlatformIO board definition does not expose
-the official Axiometa `P*_IO*` macros. Treat the table below as provisional
-unless a value is explicitly listed in the verified assignments.
+The local PlatformIO board definition does not expose the official Axiometa
+`P*_IO*` macros, so these values are copied from the Axiometa diagnostic
+firmware's runtime `PINMAP_JSON` output.
 
 | Port | IO0/ADC | IO1/CS/PWM/TX | IO2/RX |
 | --- | --- | --- | --- |
-| P1 | GPIO9 | GPIO16 | GPIO15 |
+| P1 | GPIO4 | GPIO3 | GPIO2 |
 | P2 | GPIO7 | GPIO6 | GPIO5 |
-| P3 | GPIO1 | GPIO17 | GPIO18 |
-| P4 | GPIO4 | GPIO3 | GPIO2 |
+| P3 | GPIO9 | GPIO16 | GPIO15 |
+| P4 | GPIO1 | GPIO17 | GPIO18 |
 
 Shared AX22 bus lines:
 
@@ -66,22 +65,30 @@ Shared AX22 bus lines:
 
 ## M0 Pin Assignment
 
-The Axiometa diagnostic firmware produced the following verified runtime
-outputs:
+The Axiometa diagnostic firmware produced the following verified runtime pinmap:
 
 ```text
+P1_IO0_PIN=4
+P1_IO1_PIN=3
+P1_IO2_PIN=2
+P2_IO0_PIN=7
+P2_IO1_PIN=6
+P2_IO2_PIN=5
+P3_IO0_PIN=9
+P3_IO1_PIN=16
+P3_IO2_PIN=15
+P4_IO0_PIN=1
+P4_IO1_PIN=17
+P4_IO2_PIN=18
 LED_HIGH pin=5
 MOTOR_HIGH pin=16
 ENCODER_BUTTON_PRESS pin=4
 ```
 
-Use these empirical numeric pins for M0 until the full `PINMAP_BEGIN` block is
-captured from the official Axiometa environment.
-
 | Function | Port | Module signal | GPIO |
 | --- | --- | --- | --- |
-| Encoder A/CLK | P1 | IO1 | pending full pinmap |
-| Encoder B/DT | P1 | IO2 | pending full pinmap |
+| Encoder A/CLK | P1 | IO1 | GPIO3 |
+| Encoder B/DT | P1 | IO2 | GPIO2 |
 | Encoder push | P1 | IO0 | GPIO4, unused in M0 |
 | Action button | P2 | IO1 | GPIO6 |
 | Button LED | P2 | IO2 | GPIO5 |
@@ -89,10 +96,6 @@ captured from the official Axiometa environment.
 
 The ERM module should use pulses of at least 50 ms. Variable intensity can later
 use PWM; M0 only uses simple HIGH/LOW pulses.
-
-Encoder polling is temporarily disabled in M0 because the old provisional
-encoder A pin was also GPIO16. Re-enable it only after `P1_IO1` and `P1_IO2`
-are printed numerically by the official Axiometa environment.
 
 ## Transport Assumption For First Test
 
