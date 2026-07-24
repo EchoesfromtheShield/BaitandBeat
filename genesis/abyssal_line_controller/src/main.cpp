@@ -330,6 +330,7 @@ void sendHello() {
     "HELLO",
     "{\"device_role\":\"genesis\",\"firmware\":\"abyssal-line-m0-serial\","
     "\"board\":\"genesis-mini-v1-rev2\","
+    "\"motor_gpio\":17,"
     "\"capabilities\":[\"encoder\",\"button_led\",\"vibration\",\"usb_cdc_serial\"]}"
   );
 }
@@ -399,7 +400,7 @@ void handleRemoteLine(const String& line) {
     lastGameStateMs = millis();
     sendEnvelope("DEBUG_RX", "{\"remote_type\":\"HELLO_ACK\"}");
     pulseLed(180);
-    pulseMotor(40);
+    pulseMotor(HardwareConfig::CONNECT_HAPTIC_MS);
     return;
   }
 
@@ -413,7 +414,7 @@ void handleRemoteLine(const String& line) {
 
     if (line.indexOf("\"bite_ready\":true") >= 0) {
       pulseLed(90);
-      pulseMotor(70);
+      pulseMotor(HardwareConfig::BITE_HAPTIC_MS);
     }
     return;
   }
@@ -421,14 +422,14 @@ void handleRemoteLine(const String& line) {
   if (line.indexOf("\"type\":\"PATTERN_EVENT\"") >= 0) {
     sendEnvelope("DEBUG_RX", "{\"remote_type\":\"PATTERN_EVENT\"}");
     pulseLed(35);
-    pulseMotor(35);
+    pulseMotor(HardwareConfig::PATTERN_HAPTIC_MS);
     return;
   }
 
   if (line.indexOf("\"type\":\"ERROR\"") >= 0) {
     sendEnvelope("DEBUG_RX", "{\"remote_type\":\"ERROR\"}");
     connected = false;
-    pulseMotor(160);
+    pulseMotor(HardwareConfig::ERROR_HAPTIC_MS);
   }
 }
 

@@ -19,13 +19,13 @@ constexpr uint8_t AX_P2_IO0 = 7;
 constexpr uint8_t AX_P2_IO1 = 6;
 constexpr uint8_t AX_P2_IO2 = 5;
 
-constexpr uint8_t AX_P3_IO0 = 4;
-constexpr uint8_t AX_P3_IO1 = 3;
-constexpr uint8_t AX_P3_IO2 = 2;
+constexpr uint8_t AX_P3_IO0 = 1;
+constexpr uint8_t AX_P3_IO1 = 17;
+constexpr uint8_t AX_P3_IO2 = 18;
 
-constexpr uint8_t AX_P4_IO0 = 1;
-constexpr uint8_t AX_P4_IO1 = 17;
-constexpr uint8_t AX_P4_IO2 = 18;
+constexpr uint8_t AX_P4_IO0 = 4;
+constexpr uint8_t AX_P4_IO1 = 3;
+constexpr uint8_t AX_P4_IO2 = 2;
 
 constexpr uint8_t AX22_MOSI = 12;
 constexpr uint8_t AX22_MISO = 13;
@@ -56,8 +56,12 @@ constexpr bool ACTIVE_LOW_BUTTON = true;
 constexpr bool ACTIVE_HIGH_LED = true;
 constexpr bool ACTIVE_HIGH_MOTOR = true;
 
-constexpr uint16_t ENCODER_TICK_HAPTIC_MS = 60;
+constexpr uint16_t CONNECT_HAPTIC_MS = 120;
+constexpr uint16_t BITE_HAPTIC_MS = 200;
+constexpr uint16_t PATTERN_HAPTIC_MS = 90;
+constexpr uint16_t ERROR_HAPTIC_MS = 220;
+constexpr uint16_t ENCODER_TICK_HAPTIC_MS = 90;
 constexpr uint16_t BUTTON_PRESS_LED_MS = 2000;
-constexpr uint16_t BUTTON_PRESS_HAPTIC_MS = 150;
+constexpr uint16_t BUTTON_PRESS_HAPTIC_MS = 200;
 
 } // namespace HardwareConfig

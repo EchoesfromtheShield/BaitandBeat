@@ -50,8 +50,8 @@ they match the working module examples.
 | --- | --- | --- | --- |
 | P1 | GPIO9 | GPIO16 | GPIO15 |
 | P2 | GPIO7 | GPIO6 | GPIO5 |
-| P3 | GPIO4 | GPIO3 | GPIO2 |
-| P4 | GPIO1 | GPIO17 | GPIO18 |
+| P3 | GPIO1 | GPIO17 | GPIO18 |
+| P4 | GPIO4 | GPIO3 | GPIO2 |
 
 Shared AX22 bus lines:
 
@@ -67,7 +67,8 @@ Shared AX22 bus lines:
 
 The first probe session showed the LED button illuminating on GPIO5. The
 working Axiometa test firmware identifies that same signal as `P2_IO2`; the old
-probe labels were therefore misleading, not the hardware.
+probe labels were therefore misleading, not the hardware. The same inference
+puts the ERM motor's `P3_IO1` on GPIO17.
 
 | Function | Port | Module signal | GPIO |
 | --- | --- | --- | --- |
@@ -76,7 +77,7 @@ probe labels were therefore misleading, not the hardware.
 | Encoder push | P1 | IO0 | GPIO9, unused |
 | Action button | P2 | IO1 | GPIO6 |
 | Button LED | P2 | IO2 | GPIO5 |
-| Vibration motor | P3 | IO1 | GPIO3 |
+| Vibration motor | P3 | IO1 | GPIO17 |
 
 The ERM module should use pulses of at least 50 ms. Variable intensity can later
 use PWM; M0 only uses simple HIGH/LOW pulses.

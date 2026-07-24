@@ -101,6 +101,14 @@ The old `slotN_ioX` probe labels were misleading because they did not match the
 Axiometa physical port labels. The firmware now uses explicit `P1` / `P2` /
 `P3` assignments.
 
+Follow-up on the first corrected firmware test:
+
+- `INPUT_BUTTON` press/release appeared in the serial log, so the button path is
+  executing.
+- The ERM did not vibrate with `P3_IO1` mapped to GPIO3.
+- `P3_IO1` is now mapped to GPIO17, matching the remaining connector group that
+  fits the working Axiometa test firmware.
+
 ## Current Limitations
 
 - Physical encoder, LED button, and ERM motor need one verification pass on the
