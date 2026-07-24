@@ -48,6 +48,14 @@ Then scan the motor slot:
 python tools\pin_probe_tool.py --port COM20 --scan slot3 --ms 2500
 ```
 
+If slot 3 does not vibrate, scan slot 4. On the current hardware, observed
+behavior suggests that the physical slot labels may not match this logical
+GPIO map.
+
+```powershell
+python tools\pin_probe_tool.py --port COM20 --scan slot4 --ms 2500
+```
+
 ### Input Pins
 
 Run:
@@ -58,8 +66,8 @@ python tools\pin_probe_tool.py --port COM20 --snapshot --duration 20
 
 Then:
 
-- rotate the encoder and note which `slot1_*` values change;
-- press the button and note which `slot2_*` value changes.
+- rotate only the encoder first and use the `INPUT CHANGE SUMMARY`;
+- run the command again, press only the button, and use the summary.
 
 The expected useful lines look like:
 

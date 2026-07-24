@@ -20,6 +20,9 @@ PinDef inputPins[] = {
   {"slot3_io0", HardwareConfig::SLOT3_IO0},
   {"slot3_io1", HardwareConfig::SLOT3_IO1},
   {"slot3_io2", HardwareConfig::SLOT3_IO2},
+  {"slot4_io0", HardwareConfig::SLOT4_IO0},
+  {"slot4_io1", HardwareConfig::SLOT4_IO1},
+  {"slot4_io2", HardwareConfig::SLOT4_IO2},
 };
 
 PinDef outputPins[] = {
@@ -29,6 +32,9 @@ PinDef outputPins[] = {
   {"slot3_io0", HardwareConfig::SLOT3_IO0},
   {"slot3_io1", HardwareConfig::SLOT3_IO1},
   {"slot3_io2", HardwareConfig::SLOT3_IO2},
+  {"slot4_io0", HardwareConfig::SLOT4_IO0},
+  {"slot4_io1", HardwareConfig::SLOT4_IO1},
+  {"slot4_io2", HardwareConfig::SLOT4_IO2},
 };
 
 constexpr uint8_t INPUT_PIN_COUNT = sizeof(inputPins) / sizeof(inputPins[0]);

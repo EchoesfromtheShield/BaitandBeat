@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+from collections import Counter
 import json
 import time
 
@@ -82,8 +83,11 @@ def main() -> None:
         "slot3_io0",
         "slot3_io1",
         "slot3_io2",
+        "slot4_io0",
+        "slot4_io1",
+        "slot4_io2",
     ])
-    parser.add_argument("--scan", choices=["slot2", "slot3"], help="Pulse every candidate pin in a slot.")
+    parser.add_argument("--scan", choices=["slot2", "slot3", "slot4"], help="Pulse every candidate pin in a slot.")
     parser.add_argument("--level", choices=["HIGH", "LOW"], default="HIGH")
     parser.add_argument("--ms", type=int, default=1500)
     parser.add_argument("--snapshot", action="store_true")
@@ -91,10 +95,48 @@ def main() -> None:
 
     print(f"Opening {args.port} at {args.baud}", flush=True)
     seq = 9000
+    previous_pins: dict[str, int] | None = None
+    changed_counts: Counter[str] = Counter()
+
+    def track_input_changes(lines: list[str]) -> None:
+        nonlocal previous_pins
+
+        for line in lines:
+            try:
+                message = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+
+            if message.get("type") != "PIN_PROBE_INPUT":
+                continue
+
+            pins = message.get("payload", {}).get("pins", {})
+            if not isinstance(pins, dict):
+                continue
+
+            current = {key: int(value) for key, value in pins.items()}
+            if previous_pins is None:
+                previous_pins = current
+                continue
+
+            for key, value in current.items():
+                if previous_pins.get(key) != value:
+                    changed_counts[key] += 1
+
+            previous_pins = current
+
+    def print_summary() -> None:
+        if not changed_counts:
+            return
+
+        print("\nINPUT CHANGE SUMMARY", flush=True)
+        for label, count in changed_counts.most_common():
+            print(f"{label}: {count}", flush=True)
 
     with serial.Serial(args.port, args.baud, timeout=0.05) as ser:
         time.sleep(0.2)
         reader = LineReader(ser)
+        track_input_changes(reader.poll_until(time.monotonic() + 0.05))
         wait_for_ready(reader)
         stop_at = time.monotonic() + args.duration
 
@@ -117,9 +159,10 @@ def main() -> None:
                             "duration_ms": args.ms,
                         },
                     )
-                    reader.poll_until(time.monotonic() + (args.ms / 1000.0) + 0.5)
+                    track_input_changes(reader.poll_until(time.monotonic() + (args.ms / 1000.0) + 0.5))
             write_message(ser, seq, "PIN_PROBE_STOP", {})
             reader.flush_partial()
+            print_summary()
             return
 
         if args.pulse:
@@ -134,8 +177,9 @@ def main() -> None:
                 },
             )
 
-        reader.poll_until(stop_at)
+        track_input_changes(reader.poll_until(stop_at))
         reader.flush_partial()
+        print_summary()
 
         if args.pulse:
             write_message(ser, seq, "PIN_PROBE_STOP", {})
