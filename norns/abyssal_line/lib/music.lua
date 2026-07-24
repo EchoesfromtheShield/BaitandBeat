@@ -1,6 +1,7 @@
 local Music = {}
 
 local drone_send_t = 0
+local struggle_pulse_t = 0
 
 local function clamp(value, lo, hi)
   if value < lo then
@@ -10,6 +11,20 @@ local function clamp(value, lo, hi)
     return hi
   end
   return value
+end
+
+local function safe_tension_weight(game)
+  local tension = game.tension or 0
+  local min = game.config.SAFE_TENSION_MIN
+  local max = game.config.SAFE_TENSION_MAX
+  local center = (min + max) * 0.5
+  local span = (max - min) * 0.5
+
+  if span <= 0 then
+    return 0
+  end
+
+  return clamp(1 - (math.abs(tension - center) / span), 0, 1)
 end
 
 local function has_engine_command(name)
@@ -51,6 +66,7 @@ end
 
 function Music.init()
   drone_send_t = 0
+  struggle_pulse_t = 0
   if has_engine_command("clear_layers") then
     engine.clear_layers()
   end
@@ -81,6 +97,7 @@ function Music.capture_layer(event, drone)
   local rate = 0.12 + density * 0.85
   local pan = ({ -0.48, 0.42, 0.0 })[slot] or 0
   local amp = 0.08 + math.min(slot, 3) * 0.012
+  amp = amp * 1.9
 
   engine.capture_layer(slot, drone.root_hz, rate, texture, pan, amp)
 end
@@ -95,7 +112,16 @@ function Music.tick(game, events)
 
   if has_engine_command("drone") and drone_send_t >= 0.08 then
     drone_send_t = 0
-    local amp = game.state == "CAST" and 0.0 or 0.26 + drone.pressure_0_1 * 0.08
+    local amp = 0.0
+    if game.state == "EXPLORE" then
+      amp = 0.48 + drone.pressure_0_1 * 0.12
+    elseif game.state == "RESONANCE" then
+      amp = 0.56 + drone.pressure_0_1 * 0.12 + drone.signal_0_1 * 0.08
+    elseif game.state == "STRUGGLE" then
+      amp = 0.46 + drone.pressure_0_1 * 0.08
+    elseif game.state == "SURFACE" then
+      amp = 0.42
+    end
     engine.drone(
       drone.root_hz,
       clamp(game.depth or 0, 0, 1),
@@ -105,6 +131,26 @@ function Music.tick(game, events)
       drone.fish_0_1,
       amp
     )
+  end
+
+  if game.state == "STRUGGLE" and has_engine_command("strike") then
+    local safe = safe_tension_weight(game)
+    local interval = 0.34 - safe * 0.13
+    local pan = ((game.fish_x or 0.5) - 0.5) * 1.4
+    struggle_pulse_t = struggle_pulse_t + game.config.TICK_S
+
+    if safe > 0.08 and struggle_pulse_t >= interval then
+      struggle_pulse_t = struggle_pulse_t - interval
+      engine.strike(
+        3,
+        drone.root_hz,
+        clamp((game.signal or 0.5) * 0.55 + safe * 0.45, 0, 1),
+        clamp(game.tension or 0, 0, 1),
+        clamp(pan, -1, 1)
+      )
+    end
+  else
+    struggle_pulse_t = 0
   end
 
   for _, event in ipairs(events) do
