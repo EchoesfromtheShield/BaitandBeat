@@ -272,6 +272,7 @@ int encoderAccumulator = 0;
 bool debouncedButton = false;
 bool lastRawButton = false;
 uint32_t lastButtonChangeMs = 0;
+bool lastBiteReady = false;
 
 String incomingLine;
 String remoteState = "BOOT";
@@ -407,6 +408,7 @@ String parseStringField(const String& line, const char* fieldName, const String&
 void handleRemoteLine(const String& line) {
   if (line.indexOf("\"type\":\"HELLO_ACK\"") >= 0) {
     connected = true;
+    lastBiteReady = false;
     lastGameStateMs = millis();
     sendEnvelope("DEBUG_RX", "{\"remote_type\":\"HELLO_ACK\"}");
     pulseLed(180);
@@ -422,10 +424,12 @@ void handleRemoteLine(const String& line) {
     remoteTension = parseFloatField(line, "tension_0_1", remoteTension);
     remoteCapture = parseFloatField(line, "capture_progress_0_1", remoteCapture);
 
-    if (line.indexOf("\"bite_ready\":true") >= 0) {
+    const bool biteReady = line.indexOf("\"bite_ready\":true") >= 0;
+    if (biteReady && !lastBiteReady) {
       pulseLed(90);
       pulseMotor(HardwareConfig::BITE_HAPTIC_MS);
     }
+    lastBiteReady = biteReady;
     return;
   }
 
@@ -439,6 +443,7 @@ void handleRemoteLine(const String& line) {
   if (line.indexOf("\"type\":\"ERROR\"") >= 0) {
     sendEnvelope("DEBUG_RX", "{\"remote_type\":\"ERROR\"}");
     connected = false;
+    lastBiteReady = false;
     pulseMotor(HardwareConfig::ERROR_HAPTIC_MS);
   }
 }
@@ -498,7 +503,6 @@ void flushInputs() {
     const int delta = encoderAccumulator;
     encoderAccumulator = 0;
     sendEncoderDelta(delta);
-    pulseMotor(HardwareConfig::ENCODER_TICK_HAPTIC_MS);
   }
 }
 

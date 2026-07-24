@@ -61,7 +61,6 @@ constexpr uint16_t CONNECT_HAPTIC_MS = 600;
 constexpr uint16_t BITE_HAPTIC_MS = 600;
 constexpr uint16_t PATTERN_HAPTIC_MS = 180;
 constexpr uint16_t ERROR_HAPTIC_MS = 600;
-constexpr uint16_t ENCODER_TICK_HAPTIC_MS = 250;
 constexpr uint16_t BUTTON_PRESS_LED_MS = 2000;
 constexpr uint16_t BUTTON_PRESS_HAPTIC_MS = 1200;
 
