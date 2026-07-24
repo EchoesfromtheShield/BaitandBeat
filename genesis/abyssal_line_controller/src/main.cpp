@@ -1,6 +1,164 @@
 #include <Arduino.h>
 #include "HardwareConfig.h"
 
+#if defined(ABYSSAL_LINE_PIN_PROBE)
+
+namespace {
+
+struct PinDef {
+  const char* label;
+  uint8_t pin;
+};
+
+PinDef inputPins[] = {
+  {"slot1_io0", HardwareConfig::SLOT1_IO0},
+  {"slot1_io1", HardwareConfig::SLOT1_IO1},
+  {"slot1_io2", HardwareConfig::SLOT1_IO2},
+  {"slot2_io0", HardwareConfig::SLOT2_IO0},
+  {"slot2_io1", HardwareConfig::SLOT2_IO1},
+  {"slot2_io2", HardwareConfig::SLOT2_IO2},
+  {"slot3_io0", HardwareConfig::SLOT3_IO0},
+  {"slot3_io1", HardwareConfig::SLOT3_IO1},
+  {"slot3_io2", HardwareConfig::SLOT3_IO2},
+};
+
+PinDef outputPins[] = {
+  {"slot2_io0", HardwareConfig::SLOT2_IO0},
+  {"slot2_io1", HardwareConfig::SLOT2_IO1},
+  {"slot2_io2", HardwareConfig::SLOT2_IO2},
+  {"slot3_io0", HardwareConfig::SLOT3_IO0},
+  {"slot3_io1", HardwareConfig::SLOT3_IO1},
+  {"slot3_io2", HardwareConfig::SLOT3_IO2},
+};
+
+constexpr uint8_t INPUT_PIN_COUNT = sizeof(inputPins) / sizeof(inputPins[0]);
+constexpr uint8_t OUTPUT_PIN_COUNT = sizeof(outputPins) / sizeof(outputPins[0]);
+
+int lastValues[INPUT_PIN_COUNT];
+uint32_t seq = 1;
+uint32_t lastReadMs = 0;
+uint32_t phaseStartedMs = 0;
+uint8_t outputIndex = 0;
+bool outputActive = false;
+
+void sendEnvelope(const char* type, const String& payload) {
+  Serial.print("{\"v_major\":1,\"v_minor\":0,\"seq\":");
+  Serial.print(seq++);
+  Serial.print(",\"type\":\"");
+  Serial.print(type);
+  Serial.print("\",\"payload\":");
+  Serial.print(payload);
+  Serial.println("}");
+}
+
+void allPinsInputPullup() {
+  for (uint8_t i = 0; i < INPUT_PIN_COUNT; ++i) {
+    pinMode(inputPins[i].pin, INPUT_PULLUP);
+  }
+}
+
+void sendInputSnapshot(const char* reason) {
+  String payload = String("{\"reason\":\"") + reason + "\",\"pins\":{";
+  for (uint8_t i = 0; i < INPUT_PIN_COUNT; ++i) {
+    if (i > 0) {
+      payload += ",";
+    }
+    payload += "\"";
+    payload += inputPins[i].label;
+    payload += "\":";
+    payload += digitalRead(inputPins[i].pin) == HIGH ? "1" : "0";
+  }
+  payload += "}}";
+  sendEnvelope("PIN_PROBE_INPUT", payload);
+}
+
+void readInputs() {
+  const uint32_t now = millis();
+  if ((now - lastReadMs) < 20 || outputActive) {
+    return;
+  }
+  lastReadMs = now;
+
+  bool changed = false;
+  for (uint8_t i = 0; i < INPUT_PIN_COUNT; ++i) {
+    const int value = digitalRead(inputPins[i].pin);
+    if (value != lastValues[i]) {
+      changed = true;
+      lastValues[i] = value;
+    }
+  }
+
+  if (changed) {
+    sendInputSnapshot("changed");
+  }
+}
+
+void sendOutputEvent(const PinDef& pin, bool active) {
+  String payload = "{\"label\":\"";
+  payload += pin.label;
+  payload += "\",\"gpio\":";
+  payload += pin.pin;
+  payload += ",\"active\":";
+  payload += active ? "true" : "false";
+  payload += "}";
+  sendEnvelope("PIN_PROBE_OUTPUT", payload);
+}
+
+void updateOutputScan() {
+  const uint32_t now = millis();
+
+  if (phaseStartedMs == 0) {
+    phaseStartedMs = now;
+  }
+
+  if (!outputActive && (now - phaseStartedMs) >= 700) {
+    allPinsInputPullup();
+    const PinDef& pin = outputPins[outputIndex];
+    pinMode(pin.pin, OUTPUT);
+    digitalWrite(pin.pin, HIGH);
+    outputActive = true;
+    phaseStartedMs = now;
+    sendOutputEvent(pin, true);
+    return;
+  }
+
+  if (outputActive && (now - phaseStartedMs) >= 220) {
+    const PinDef& pin = outputPins[outputIndex];
+    digitalWrite(pin.pin, LOW);
+    pinMode(pin.pin, INPUT_PULLUP);
+    outputActive = false;
+    phaseStartedMs = now;
+    sendOutputEvent(pin, false);
+    outputIndex = (outputIndex + 1) % OUTPUT_PIN_COUNT;
+  }
+}
+
+} // namespace
+
+void setup() {
+  Serial.begin(HardwareConfig::SERIAL_BAUD);
+  allPinsInputPullup();
+  delay(300);
+
+  for (uint8_t i = 0; i < INPUT_PIN_COUNT; ++i) {
+    lastValues[i] = digitalRead(inputPins[i].pin);
+  }
+
+  sendEnvelope(
+    "PIN_PROBE_HELLO",
+    "{\"board\":\"genesis-mini-v1-rev2\",\"notes\":\"do_not_press_button_during_output_scan\"}"
+  );
+  sendInputSnapshot("boot");
+}
+
+void loop() {
+  readInputs();
+  updateOutputScan();
+  delay(1);
+}
+
+#else
+
 namespace {
 
 constexpr uint8_t PROTOCOL_MAJOR = 1;
@@ -324,3 +482,5 @@ void loop() {
   updateFeedback();
   delay(1);
 }
+
+#endif

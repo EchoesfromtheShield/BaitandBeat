@@ -76,6 +76,7 @@ def main() -> None:
     parser.add_argument("--port", default="COM20")
     parser.add_argument("--baud", type=int, default=115200)
     parser.add_argument("--duration", type=float, default=0.0, help="Stop after N seconds; 0 means run forever.")
+    parser.add_argument("--listen-only", action="store_true", help="Only print incoming serial lines.")
     args = parser.parse_args()
 
     seq = 1000
@@ -97,7 +98,7 @@ def main() -> None:
             if raw:
                 text = raw.decode("utf-8", errors="replace").strip()
                 print("GENESIS>", text)
-                if "\"type\":\"HELLO\"" in text:
+                if not args.listen_only and "\"type\":\"HELLO\"" in text:
                     seq = write_message(
                         ser,
                         seq,
@@ -110,6 +111,9 @@ def main() -> None:
                     )
 
             elapsed = time.monotonic() - start
+            if args.listen_only:
+                continue
+
             if elapsed - last_state_s >= 0.2:
                 last_state_s = elapsed
                 state = synthetic_state(elapsed)

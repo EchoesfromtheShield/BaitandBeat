@@ -45,3 +45,14 @@ Expected behavior:
   events.
 
 The Genesis side still does not own authoritative game state.
+
+## Pin Probe
+
+If encoder, LED button, or vibration motor do not react, flash the probe env:
+
+```powershell
+cd genesis\abyssal_line_controller
+python -m platformio run -e genesis_mini_pin_probe -t upload
+```
+
+Then follow [docs/PIN_PROBE.md](../../docs/PIN_PROBE.md).
