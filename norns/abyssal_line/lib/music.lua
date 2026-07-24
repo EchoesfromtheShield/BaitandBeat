@@ -1,6 +1,7 @@
 local Music = {}
 
 local last_drone_t = 0
+local last_fifth_t = 0
 
 local function clamp(value, lo, hi)
   if value < lo then
@@ -15,15 +16,20 @@ end
 function Music.drone_params(game)
   local depth = game.depth or 0
   local signal = game.signal or 0
+  local depth_signal = game.depth_signal or signal
+  local fish = (game.overlap_signal or 0) * depth_signal
   local pressure = depth
-  local brightness = clamp(1 - depth * 0.65 + signal * 0.25, 0, 1)
+  local brightness = clamp(1 - depth * 0.65 + signal * 0.18 + fish * 0.22, 0, 1)
   local root_hz = game.config.BASE_DRONE_HZ * (1 + depth * 0.9)
 
   return {
     root_hz = root_hz,
+    fifth_hz = root_hz * 1.5,
     brightness_0_1 = brightness,
     pressure_0_1 = pressure,
     signal_0_1 = signal,
+    depth_signal_0_1 = depth_signal,
+    fish_0_1 = fish,
   }
 end
 
@@ -61,6 +67,26 @@ function Music.tick(game, events)
     end
   end
 
+  last_fifth_t = last_fifth_t + game.config.TICK_S
+  if (game.state == "RESONANCE" or game.state == "STRUGGLE")
+      and drone.fish_0_1 > 0.06 then
+    local interval = 0.22 + (1 - drone.fish_0_1) * 0.46
+    if last_fifth_t >= interval then
+      last_fifth_t = 0
+      if engine.amp then
+        engine.amp(0.04 + drone.fish_0_1 * 0.13)
+      end
+      if engine.release then
+        engine.release(0.45 + drone.fish_0_1 * 0.35)
+      end
+      if engine.hz then
+        engine.hz(drone.fifth_hz)
+      end
+    end
+  else
+    last_fifth_t = 0
+  end
+
   for _, event in ipairs(events) do
     if event.type == "pattern" and engine.hz then
       local hz = event_hz(event.name, drone.root_hz)
@@ -76,4 +102,3 @@ function Music.tick(game, events)
 end
 
 return Music
-

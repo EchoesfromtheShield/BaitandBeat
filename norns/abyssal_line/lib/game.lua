@@ -11,6 +11,15 @@ local function clamp(value, lo, hi)
   return value
 end
 
+local function struggle_gain(config, tension)
+  local safe_mid = (config.SAFE_TENSION_MIN + config.SAFE_TENSION_MAX) * 0.5
+  local span = math.max(safe_mid - config.SLACK_TENSION, config.OVERLOAD_TENSION - safe_mid)
+  local edge_distance = clamp(math.abs(tension - safe_mid) / span, 0, 1)
+  local center_weight = 1 - edge_distance
+  local edge_gain = config.STRUGGLE_EDGE_GAIN or 0.28
+  return edge_gain + (1 - edge_gain) * center_weight * center_weight
+end
+
 local PULL_PATTERN = {
   { name = "rest", duration = 0.90, pull = 0.00 },
   { name = "small_tug", duration = 0.18, pull = 0.42 },
@@ -55,6 +64,11 @@ function Game.new(config)
     line_depth = 0.0,
     creature_depth = config.CREATURE_DEPTH,
     fish_depth = config.CREATURE_DEPTH,
+    hook_x = 0.5,
+    fish_x = 0.5,
+    fish_phase = 0.0,
+    depth_signal = 0.0,
+    overlap_signal = 0.0,
     signal = 0.0,
     still_timer = 0.0,
     bite_ready = false,
@@ -77,8 +91,14 @@ function Game:encoder(delta)
     return
   end
 
+  local step = self.config.EXPLORE_DEPTH_STEP or self.config.DEPTH_STEP
+  if self.state == "STRUGGLE" then
+    local base = self.config.STRUGGLE_DEPTH_STEP or step
+    step = base * struggle_gain(self.config, self.tension)
+  end
+
   self.line_depth = clamp(
-    self.line_depth + delta * self.config.DEPTH_STEP,
+    self.line_depth + delta * step,
     0,
     1
   )
@@ -111,6 +131,8 @@ end
 function Game:reset_to_explore()
   self.state = "EXPLORE"
   self.signal = 0
+  self.depth_signal = 0
+  self.overlap_signal = 0
   self.still_timer = 0
   self.bite_ready = false
   self.fight_time = 0
@@ -120,13 +142,29 @@ function Game:reset_to_explore()
   self.capture_progress = 0
   self.creature_depth = clamp(0.58 + (#self.captured_layers * 0.09), 0.2, 0.86)
   self.fish_depth = self.creature_depth
+  self.fish_phase = (#self.captured_layers * 1.73) % (math.pi * 2)
+  self.fish_x = 0.5
+end
+
+function Game:_update_fish_swim(dt, depth_signal)
+  local speed = self.config.CREATURE_SWIM_SPEED or 1.45
+  local range = self.config.CREATURE_SWIM_RANGE or 0.42
+  self.fish_phase = (self.fish_phase + dt * speed * (0.8 + depth_signal * 0.45)) % (math.pi * 2)
+  self.fish_x = clamp(self.hook_x + math.sin(self.fish_phase) * range, 0.02, 0.98)
+  self.overlap_signal = clamp(
+    1 - (math.abs(self.fish_x - self.hook_x) / (self.config.HOOK_OVERLAP_RADIUS or 0.105)),
+    0,
+    1
+  )
 end
 
 function Game:_update_resonance(dt)
   local distance = math.abs(self.line_depth - self.creature_depth)
-  self.signal = clamp(1 - (distance / self.config.RESONANCE_RADIUS), 0, 1)
+  self.depth_signal = clamp(1 - (distance / self.config.RESONANCE_RADIUS), 0, 1)
+  self:_update_fish_swim(dt, self.depth_signal)
+  self.signal = self.depth_signal * (0.45 + self.overlap_signal * 0.55)
 
-  if self.signal <= 0 then
+  if self.depth_signal <= 0 then
     self.state = "EXPLORE"
     self.still_timer = 0
     self.bite_ready = false
@@ -144,12 +182,19 @@ function Game:_update_resonance(dt)
   end
 
   self.bite_ready = self.still_timer >= self.config.BITE_HOLD_S
+    and self.overlap_signal >= 0.72
 end
 
 function Game:_update_struggle(dt, events)
   self.fight_time = self.fight_time + dt
 
   local item, index = pattern_at(self.fight_time)
+  self.fish_phase = (self.fish_phase + dt * (2.4 + item.pull * 3.2)) % (math.pi * 2)
+  self.fish_x = clamp(self.hook_x + math.sin(self.fish_phase) * (0.12 + item.pull * 0.10), 0.03, 0.97)
+  self.overlap_signal = clamp(1 - math.abs(self.fish_x - self.hook_x) / 0.28, 0, 1)
+  self.depth_signal = 1.0
+  self.signal = clamp(0.55 + item.pull * 0.45, 0, 1)
+
   if index ~= self.pattern_index then
     self.pattern_index = index
     if item.name ~= "rest" then
