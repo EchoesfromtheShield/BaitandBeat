@@ -1,0 +1,16 @@
+.DS_Store
+Thumbs.db
+
+__pycache__/
+*.pyc
+
+.pio/
+.vscode/
+build/
+dist/
+
+*.log
+*.tmp
+
+AGENTS.md
+sources/

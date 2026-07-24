@@ -1,0 +1,22 @@
+local Config = {}
+
+Config.TICK_S = 1 / 15
+Config.DEPTH_STEP = 0.008
+
+Config.CREATURE_DEPTH = 0.63
+Config.RESONANCE_RADIUS = 0.13
+Config.BITE_RADIUS = 0.035
+Config.BITE_HOLD_S = 3.0
+
+Config.SAFE_TENSION_MIN = 0.24
+Config.SAFE_TENSION_MAX = 0.56
+Config.SLACK_TENSION = 0.12
+Config.OVERLOAD_TENSION = 0.76
+Config.SLACK_FAIL_S = 2.0
+Config.OVERLOAD_FAIL_S = 1.2
+Config.CAPTURE_RATE = 0.055
+
+Config.BASE_DRONE_HZ = 55
+
+return Config
+

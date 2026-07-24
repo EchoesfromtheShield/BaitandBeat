@@ -1,0 +1,12 @@
+{
+  "v_major": 1,
+  "v_minor": 0,
+  "seq": 1,
+  "type": "HELLO",
+  "payload": {
+    "device_role": "genesis",
+    "firmware": "unknown",
+    "capabilities": ["encoder", "button"]
+  }
+}
+
