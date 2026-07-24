@@ -64,9 +64,12 @@ function Game.new(config)
     line_depth = 0.0,
     creature_depth = config.CREATURE_DEPTH,
     fish_depth = config.CREATURE_DEPTH,
+    hooked_depth = config.CREATURE_DEPTH,
     hook_x = 0.5,
     fish_x = 0.5,
-    fish_phase = 0.0,
+    fish_target_x = 0.72,
+    fish_turn_timer = 0.4,
+    fish_burst_timer = 0.0,
     depth_signal = 0.0,
     overlap_signal = 0.0,
     signal = 0.0,
@@ -116,7 +119,11 @@ function Game:press()
     self.state = "STRUGGLE"
     self.fight_time = 0
     self.pattern_index = 0
+    self.hooked_depth = self.creature_depth
     self.fish_depth = self.creature_depth
+    self.fish_target_x = self.fish_x < self.hook_x and 0.74 or 0.26
+    self.fish_turn_timer = 0.15
+    self.fish_burst_timer = 0
     self.bite_ready = false
     self.captured_events = {}
     self.last_reason = "hooked"
@@ -141,16 +148,46 @@ function Game:reset_to_explore()
   self.overload_timer = 0
   self.capture_progress = 0
   self.creature_depth = clamp(0.58 + (#self.captured_layers * 0.09), 0.2, 0.86)
+  self.hooked_depth = self.creature_depth
   self.fish_depth = self.creature_depth
-  self.fish_phase = (#self.captured_layers * 1.73) % (math.pi * 2)
   self.fish_x = 0.5
+  self.fish_target_x = #self.captured_layers % 2 == 0 and 0.76 or 0.24
+  self.fish_turn_timer = 0.35
+  self.fish_burst_timer = 0
 end
 
-function Game:_update_fish_swim(dt, depth_signal)
-  local speed = self.config.CREATURE_SWIM_SPEED or 1.45
-  local range = self.config.CREATURE_SWIM_RANGE or 0.42
-  self.fish_phase = (self.fish_phase + dt * speed * (0.8 + depth_signal * 0.45)) % (math.pi * 2)
-  self.fish_x = clamp(self.hook_x + math.sin(self.fish_phase) * range, 0.02, 0.98)
+function Game:_update_fish_swim(dt, depth_signal, speed_scale)
+  local base_speed = self.config.CREATURE_SWIM_SPEED or 0.17
+  local scale = speed_scale or 1.0
+  self.fish_turn_timer = self.fish_turn_timer - dt
+  self.fish_burst_timer = math.max(0, self.fish_burst_timer - dt)
+
+  if self.fish_turn_timer <= 0 then
+    local side_target = self.fish_x < self.hook_x and 1 or -1
+    local far = 0.23 + math.random() * 0.18
+    local near = 0.05 + math.random() * 0.12
+    local offset = math.random() < 0.65 and far or near
+    self.fish_target_x = clamp(self.hook_x + side_target * offset, 0.08, 0.92)
+    self.fish_turn_timer = 1.0 + math.random() * 2.2
+
+    if math.random() < (self.config.CREATURE_SWIM_BURST_CHANCE or 0.34) then
+      self.fish_burst_timer = 0.25 + math.random() * 0.55
+    end
+  end
+
+  local burst = self.fish_burst_timer > 0 and 2.8 or 1.0
+  local speed = base_speed * scale * (0.75 + depth_signal * 0.55) * burst
+  local dx = self.fish_target_x - self.fish_x
+  local max_step = speed * dt
+
+  if math.abs(dx) <= max_step then
+    self.fish_x = self.fish_target_x
+  elseif dx > 0 then
+    self.fish_x = self.fish_x + max_step
+  else
+    self.fish_x = self.fish_x - max_step
+  end
+
   self.overlap_signal = clamp(
     1 - (math.abs(self.fish_x - self.hook_x) / (self.config.HOOK_OVERLAP_RADIUS or 0.105)),
     0,
@@ -189,9 +226,7 @@ function Game:_update_struggle(dt, events)
   self.fight_time = self.fight_time + dt
 
   local item, index = pattern_at(self.fight_time)
-  self.fish_phase = (self.fish_phase + dt * (2.4 + item.pull * 3.2)) % (math.pi * 2)
-  self.fish_x = clamp(self.hook_x + math.sin(self.fish_phase) * (0.12 + item.pull * 0.10), 0.03, 0.97)
-  self.overlap_signal = clamp(1 - math.abs(self.fish_x - self.hook_x) / 0.28, 0, 1)
+  self:_update_fish_swim(dt, 1.0, 1.15 + item.pull * 1.25)
   self.depth_signal = 1.0
   self.signal = clamp(0.55 + item.pull * 0.45, 0, 1)
 
@@ -209,8 +244,18 @@ function Game:_update_struggle(dt, events)
     end
   end
 
-  local pull_offset = item.pull * 0.22
-  local target = clamp(self.creature_depth + pull_offset, 0, 1)
+  if self.tension >= self.config.SAFE_TENSION_MIN
+      and self.tension <= self.config.SAFE_TENSION_MAX then
+    self.capture_progress = clamp(
+      self.capture_progress + dt * self.config.CAPTURE_RATE,
+      0,
+      1
+    )
+  end
+
+  local ascent_depth = self.hooked_depth * (1 - self.capture_progress)
+  local pull_offset = item.pull * 0.18
+  local target = clamp(ascent_depth + pull_offset, 0, 1)
   self.fish_depth = self.fish_depth + (target - self.fish_depth) * 0.18
   self.tension = clamp(math.abs(self.fish_depth - self.line_depth) * 2.6, 0, 1)
 
@@ -238,15 +283,6 @@ function Game:_update_struggle(dt, events)
     self.last_reason = "line_broken"
     table.insert(events, { type = "failure", name = "line_broken" })
     return
-  end
-
-  if self.tension >= self.config.SAFE_TENSION_MIN
-      and self.tension <= self.config.SAFE_TENSION_MAX then
-    self.capture_progress = clamp(
-      self.capture_progress + dt * self.config.CAPTURE_RATE,
-      0,
-      1
-    )
   end
 
   if self.capture_progress >= 1 then

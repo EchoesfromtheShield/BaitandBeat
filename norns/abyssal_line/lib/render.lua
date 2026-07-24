@@ -20,10 +20,10 @@ local function fish_to_x(value)
 end
 
 local function draw_dither(view_top, view_span, top, bottom)
-  for y = top, bottom, 2 do
+  for y = top, bottom, 3 do
     local world_depth = clamp(view_top + ((y - top) / (bottom - top)) * view_span, 0, 1)
-    local spacing = math.max(4, 14 - math.floor(world_depth * 10))
-    local level = 1 + math.floor(world_depth * 5)
+    local spacing = math.max(7, 22 - math.floor(world_depth * 9))
+    local level = 1 + math.floor(world_depth * 3)
     local phase = (y + math.floor(world_depth * 127)) % spacing
 
     screen.level(level)
@@ -31,15 +31,27 @@ local function draw_dither(view_top, view_span, top, bottom)
       if x >= 1 then
         screen.rect(x, y, 1, 1)
       end
-      if world_depth > 0.45 and x + 3 >= 1 and x + 3 < 128 and (x + y) % 3 == 0 then
-        screen.rect(x + 3, y + 1, 1, 1)
+      if world_depth > 0.62 and x + 5 >= 1 and x + 5 < 128 and (x + y) % 5 == 0 then
+        screen.rect(x + 5, y + 1, 1, 1)
       end
-      if world_depth > 0.72 and x + 1 >= 1 and x + 1 < 128 then
-        screen.rect(x + 1, y + 1, 1, 1)
+      if world_depth > 0.82 and x + 2 >= 1 and x + 2 < 128 and (x + y) % 7 == 0 then
+        screen.rect(x + 2, y + 2, 1, 1)
       end
     end
     screen.fill()
   end
+end
+
+local function draw_surface(view_top, view_span, top, bottom)
+  if view_top > 0 then
+    return
+  end
+
+  local y = clamp(world_to_y(0, view_top, view_span, top, bottom), top, bottom)
+  screen.level(10)
+  screen.move(0, y)
+  screen.line(127, y)
+  screen.stroke()
 end
 
 local function draw_hook(x, y, ready)
@@ -52,24 +64,35 @@ local function draw_hook(x, y, ready)
   screen.fill()
 end
 
-local function draw_fish_glyph(x, y, level, ready)
-  screen.level(level)
-  screen.move(x - 7, y)
-  screen.line(x - 2, y - 3)
-  screen.line(x + 6, y)
-  screen.line(x - 2, y + 3)
-  screen.line(x - 7, y)
+local function draw_fish_signal(x, y, level, signal, ready)
+  local radius = 2 + clamp(signal, 0, 1) * 8
+
+  screen.level(math.max(2, level - 3))
+  screen.circle(x, y, radius)
   screen.stroke()
 
-  screen.move(x - 7, y)
-  screen.line(x - 11, y - 3)
-  screen.move(x - 7, y)
-  screen.line(x - 11, y + 3)
-  screen.stroke()
+  if signal > 0.34 then
+    screen.level(math.max(1, level - 6))
+    screen.circle(x, y, radius + 4)
+    screen.stroke()
+  end
+
+  screen.level(level)
+  screen.rect(x - 1, y - 1, 3, 3)
+  screen.fill()
 
   if ready then
     screen.level(15)
-    screen.circle(x, y, 6)
+    screen.rect(x - 2, y - 2, 5, 5)
+    screen.stroke()
+  end
+end
+
+local function draw_ascent_trace(hook_x, fish_y, top)
+  screen.level(3)
+  for y = top, fish_y, 7 do
+    screen.move(hook_x - 2, y)
+    screen.line(hook_x + 2, y)
     screen.stroke()
   end
 end
@@ -105,34 +128,36 @@ function Render.redraw(game, drone, genesis)
   screen.clear()
 
   local top = 12
-  local bottom = 51
-  local view_span = game.config.CAMERA_DEPTH_SPAN or 0.22
+  local bottom = 50
+  local view_span = game.config.CAMERA_DEPTH_SPAN or 0.16
   local view_top = clamp(game.depth - view_span * 0.55, 0, 1 - view_span)
   local hook_x = 64
   local hook_y = clamp(world_to_y(game.depth, view_top, view_span, top, bottom), top, bottom)
   local page = math.floor(game.depth / view_span) + 1
-  local depth_m = math.floor(game.depth * 100)
+  local depth_m = math.floor(game.depth * (game.config.MAX_DEPTH_M or 420))
 
   draw_dither(view_top, view_span, top, bottom)
+  draw_surface(view_top, view_span, top, bottom)
 
   screen.level(15)
   screen.move(2, 8)
   screen.text(game.state)
 
   screen.level(7)
-  screen.move(78, 8)
+  screen.move(76, 8)
   screen.text(string.format("%03dm p%d", depth_m, page))
 
   if game.state == "STRUGGLE" then
     local fish_y = clamp(world_to_y(game.fish_depth, view_top, view_span, top, bottom), top, bottom)
     local fish_x = fish_to_x(game.fish_x)
+    draw_ascent_trace(hook_x, fish_y, top)
     screen.level(11)
     screen.move(hook_x, top)
     screen.line(hook_x, hook_y)
     screen.line(fish_x, fish_y)
     screen.stroke()
     draw_hook(hook_x, hook_y, false)
-    draw_fish_glyph(fish_x, fish_y, 7 + math.floor(game.signal * 8), false)
+    draw_fish_signal(fish_x, fish_y, 7 + math.floor(game.signal * 8), game.signal, false)
   else
     screen.level(12)
     screen.move(hook_x, top)
@@ -142,25 +167,30 @@ function Render.redraw(game, drone, genesis)
 
     if game.state == "RESONANCE" then
       local fish_y = world_to_y(game.creature_depth, view_top, view_span, top, bottom)
-      if fish_y >= top - 6 and fish_y <= bottom + 6 then
+      if fish_y >= top - 8 and fish_y <= bottom + 8 then
         local fish_x = fish_to_x(game.fish_x)
         local level = 3 + math.floor(game.signal * 12)
-        draw_fish_glyph(fish_x, fish_y, level, game.bite_ready)
+        draw_fish_signal(fish_x, fish_y, level, game.signal, game.bite_ready)
       end
     end
   end
 
   if game.state == "STRUGGLE" then
+    screen.level(5)
+    screen.move(5, 53)
+    screen.text("TEN")
+    screen.move(74, 53)
+    screen.text("UP")
     marked_bar(
       5,
-      55,
+      56,
       56,
       7,
       game.tension,
       game.config.SAFE_TENSION_MIN,
       game.config.SAFE_TENSION_MAX
     )
-    marked_bar(74, 55, 49, 7, game.capture_progress)
+    marked_bar(74, 56, 49, 7, game.capture_progress)
   end
 
   screen.level(6)
