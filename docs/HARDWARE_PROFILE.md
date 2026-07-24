@@ -43,8 +43,9 @@ Current Axiometa module reference:
 ## AX22 Port GPIO Map
 
 The Genesis Mini schematic shows shared SPI/I2C signals plus three local GPIO
-lines per AX22 port. The application uses the Axiometa `P*` port names because
-they match the working module examples.
+lines per AX22 port, but the local PlatformIO board definition does not expose
+the official Axiometa `P*_IO*` macros. Treat the table below as provisional
+unless a value is explicitly listed in the verified assignments.
 
 | Port | IO0/ADC | IO1/CS/PWM/TX | IO2/RX |
 | --- | --- | --- | --- |
@@ -65,22 +66,33 @@ Shared AX22 bus lines:
 
 ## M0 Pin Assignment
 
-The first probe session showed the LED button illuminating on GPIO5. The
-working Axiometa test firmware identifies that same signal as `P2_IO2`; the old
-probe labels were therefore misleading, not the hardware. The same inference
-puts the ERM motor's `P3_IO1` on GPIO17.
+The Axiometa diagnostic firmware produced the following verified runtime
+outputs:
+
+```text
+LED_HIGH pin=5
+MOTOR_HIGH pin=16
+ENCODER_BUTTON_PRESS pin=4
+```
+
+Use these empirical numeric pins for M0 until the full `PINMAP_BEGIN` block is
+captured from the official Axiometa environment.
 
 | Function | Port | Module signal | GPIO |
 | --- | --- | --- | --- |
-| Encoder A/CLK | P1 | IO1 | GPIO16 |
-| Encoder B/DT | P1 | IO2 | GPIO15 |
-| Encoder push | P1 | IO0 | GPIO9, unused |
+| Encoder A/CLK | P1 | IO1 | pending full pinmap |
+| Encoder B/DT | P1 | IO2 | pending full pinmap |
+| Encoder push | P1 | IO0 | GPIO4, unused in M0 |
 | Action button | P2 | IO1 | GPIO6 |
 | Button LED | P2 | IO2 | GPIO5 |
-| Vibration motor | P3 | IO1 | GPIO17 |
+| Vibration motor | P3 | IO1 | GPIO16 |
 
 The ERM module should use pulses of at least 50 ms. Variable intensity can later
 use PWM; M0 only uses simple HIGH/LOW pulses.
+
+Encoder polling is temporarily disabled in M0 because the old provisional
+encoder A pin was also GPIO16. Re-enable it only after `P1_IO1` and `P1_IO2`
+are printed numerically by the official Axiometa environment.
 
 ## Transport Assumption For First Test
 

@@ -43,25 +43,34 @@ constexpr uint8_t AX22_SCL = 11;
 constexpr uint8_t ENCODER_A_PIN = AX_P1_IO1;
 constexpr uint8_t ENCODER_B_PIN = AX_P1_IO2;
 constexpr uint8_t ENCODER_PUSH_PIN = AX_P1_IO0; // unused in M0
+constexpr bool HAS_ROTARY_ENCODER = false;
 
 // P2: tactile LED button module.
 constexpr uint8_t ACTION_BUTTON_PIN = AX_P2_IO1;
 constexpr uint8_t ACTION_LED_PIN = AX_P2_IO2;
 
 // P3: ERM vibration motor module.
-constexpr uint8_t VIBRATION_MOTOR_PIN = AX_P3_IO1;
+//
+// Axiometa Studio fingerprint output:
+//   MOTOR_PIN_HIGH: 16
+//   LED_PIN_HIGH: 5
+//
+// Use the verified numeric motor pin for M0. This conflicts with the current
+// hand-written P1_IO1 guess, so the full Axiometa P* macro fingerprint is still
+// needed before treating the encoder map as final.
+constexpr uint8_t VIBRATION_MOTOR_PIN = 16;
 constexpr bool HAS_VIBRATION_MOTOR = true;
 
 constexpr bool ACTIVE_LOW_BUTTON = true;
 constexpr bool ACTIVE_HIGH_LED = true;
 constexpr bool ACTIVE_HIGH_MOTOR = true;
 
-constexpr uint16_t CONNECT_HAPTIC_MS = 120;
-constexpr uint16_t BITE_HAPTIC_MS = 200;
-constexpr uint16_t PATTERN_HAPTIC_MS = 90;
-constexpr uint16_t ERROR_HAPTIC_MS = 220;
-constexpr uint16_t ENCODER_TICK_HAPTIC_MS = 90;
+constexpr uint16_t CONNECT_HAPTIC_MS = 600;
+constexpr uint16_t BITE_HAPTIC_MS = 600;
+constexpr uint16_t PATTERN_HAPTIC_MS = 180;
+constexpr uint16_t ERROR_HAPTIC_MS = 600;
+constexpr uint16_t ENCODER_TICK_HAPTIC_MS = 250;
 constexpr uint16_t BUTTON_PRESS_LED_MS = 2000;
-constexpr uint16_t BUTTON_PRESS_HAPTIC_MS = 200;
+constexpr uint16_t BUTTON_PRESS_HAPTIC_MS = 1200;
 
 } // namespace HardwareConfig

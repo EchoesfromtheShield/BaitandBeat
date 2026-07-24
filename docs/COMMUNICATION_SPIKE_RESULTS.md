@@ -106,13 +106,20 @@ Follow-up on the first corrected firmware test:
 - `INPUT_BUTTON` press/release appeared in the serial log, so the button path is
   executing.
 - The ERM did not vibrate with `P3_IO1` mapped to GPIO3.
-- `P3_IO1` is now mapped to GPIO17, matching the remaining connector group that
-  fits the working Axiometa test firmware.
+- The ERM did not vibrate with `P3_IO1` mapped to GPIO17.
+- Axiometa diagnostic output showed `MOTOR_HIGH pin=16`, `LED_HIGH pin=5`, and
+  `ENCODER_BUTTON_PRESS pin=4`.
+- M0 now uses `VIBRATION_MOTOR_PIN = 16` and prints `HAPTIC_PULSE` whenever it
+  tries to drive the motor.
+- The old provisional encoder pin also used GPIO16, so encoder polling is
+  temporarily disabled in M0 until the numeric `P1_IO1` / `P1_IO2` values are
+  captured from Axiometa.
 
 ## Current Limitations
 
-- Physical encoder, LED button, and ERM motor need one verification pass on the
-  corrected M0 firmware.
+- LED button and ERM motor need one verification pass on the corrected M0
+  firmware.
+- Encoder CLK/DT numeric pins are still pending from Axiometa `PINMAP_BEGIN`.
 - Norns-side serial adapter is not committed yet.
 
 ## Selected Transport For Next Test

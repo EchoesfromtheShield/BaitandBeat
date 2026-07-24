@@ -279,6 +279,8 @@ float remoteSignal = 0.0f;
 float remoteTension = 0.0f;
 float remoteCapture = 0.0f;
 
+void sendEnvelope(const char* type, const String& payload);
+
 void setLed(bool on) {
   digitalWrite(
     HardwareConfig::ACTION_LED_PIN,
@@ -304,6 +306,11 @@ void pulseMotor(uint16_t durationMs) {
 
   const uint32_t until = millis() + static_cast<uint32_t>(durationMs);
   motorUntilMs = motorUntilMs > until ? motorUntilMs : until;
+  String payload = String("{\"pin\":") + HardwareConfig::VIBRATION_MOTOR_PIN;
+  payload += ",\"duration_ms\":";
+  payload += durationMs;
+  payload += "}";
+  sendEnvelope("HAPTIC_PULSE", payload);
 }
 
 void pulseLed(uint16_t durationMs) {
@@ -326,13 +333,16 @@ void sendEnvelope(const char* type, const String& payload) {
 }
 
 void sendHello() {
-  sendEnvelope(
-    "HELLO",
-    "{\"device_role\":\"genesis\",\"firmware\":\"abyssal-line-m0-serial\","
-    "\"board\":\"genesis-mini-v1-rev2\","
-    "\"motor_gpio\":17,"
-    "\"capabilities\":[\"encoder\",\"button_led\",\"vibration\",\"usb_cdc_serial\"]}"
-  );
+  String payload = "{\"device_role\":\"genesis\",\"firmware\":\"abyssal-line-m0-serial\",";
+  payload += "\"board\":\"genesis-mini-v1-rev2\",";
+  payload += "\"motor_gpio\":";
+  payload += HardwareConfig::VIBRATION_MOTOR_PIN;
+  payload += ",\"capabilities\":[";
+  if (HardwareConfig::HAS_ROTARY_ENCODER) {
+    payload += "\"encoder\",";
+  }
+  payload += "\"button_led\",\"vibration\",\"usb_cdc_serial\"]}";
+  sendEnvelope("HELLO", payload);
 }
 
 void sendEncoderDelta(int delta) {
@@ -439,6 +449,10 @@ bool readRawActionButton() {
 }
 
 void pollEncoder() {
+  if (!HardwareConfig::HAS_ROTARY_ENCODER) {
+    return;
+  }
+
   const int8_t current = readEncoderState();
   if (current == lastEncoderState) {
     return;
@@ -562,8 +576,10 @@ void sendPeriodicHello() {
 } // namespace
 
 void setup() {
-  pinMode(HardwareConfig::ENCODER_A_PIN, INPUT_PULLUP);
-  pinMode(HardwareConfig::ENCODER_B_PIN, INPUT_PULLUP);
+  if (HardwareConfig::HAS_ROTARY_ENCODER) {
+    pinMode(HardwareConfig::ENCODER_A_PIN, INPUT_PULLUP);
+    pinMode(HardwareConfig::ENCODER_B_PIN, INPUT_PULLUP);
+  }
   pinMode(HardwareConfig::ACTION_BUTTON_PIN, INPUT);
   pinMode(HardwareConfig::ACTION_LED_PIN, OUTPUT);
   if (HardwareConfig::HAS_VIBRATION_MOTOR) {
@@ -574,7 +590,9 @@ void setup() {
   setMotor(false);
 
   Serial.begin(HardwareConfig::SERIAL_BAUD);
-  lastEncoderState = readEncoderState();
+  if (HardwareConfig::HAS_ROTARY_ENCODER) {
+    lastEncoderState = readEncoderState();
+  }
   delay(200);
   sendHello();
 }
