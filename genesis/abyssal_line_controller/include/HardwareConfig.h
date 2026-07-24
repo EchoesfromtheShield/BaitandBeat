@@ -57,6 +57,7 @@ constexpr bool ACTIVE_HIGH_LED = true;
 constexpr bool ACTIVE_HIGH_MOTOR = true;
 
 constexpr uint16_t ENCODER_TICK_HAPTIC_MS = 60;
+constexpr uint16_t BUTTON_PRESS_LED_MS = 2000;
 constexpr uint16_t BUTTON_PRESS_HAPTIC_MS = 150;
 
 } // namespace HardwareConfig

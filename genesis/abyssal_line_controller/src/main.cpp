@@ -467,7 +467,7 @@ void pollButton() {
   debouncedButton = rawPressed;
   sendButton(debouncedButton ? "press" : "release");
   if (debouncedButton) {
-    pulseLed(80);
+    pulseLed(HardwareConfig::BUTTON_PRESS_LED_MS);
     pulseMotor(HardwareConfig::BUTTON_PRESS_HAPTIC_MS);
   }
 }
