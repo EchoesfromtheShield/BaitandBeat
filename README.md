@@ -56,7 +56,7 @@ The Norns folder contains a first script skeleton:
 norns/abyssal_line/abyssal_line.lua
 ```
 
-The intended local Norns controls for early testing are:
+The local Norns fallback controls are:
 
 - `K3`: cast or hook when the bite is ready.
 - `E3`: move the line depth.
@@ -64,6 +64,13 @@ The intended local Norns controls for early testing are:
 Genesis hardware code exists for the M0 communication spike. USB serial has
 been verified on the PC and on Norns; the corrected firmware uses Axiometa
 ports P1/P2/P3 for encoder, LED button, and ERM motor.
+
+When Genesis is connected to the Norns USB host it should appear as
+`/dev/ttyACM0`. The script opens that port at 115200 baud, receives Genesis
+encoder/button input, and streams authoritative `GAME_STATE` and
+`PATTERN_EVENT` messages back to Genesis. The Norns screen shows `G --` when
+the serial device is missing, `G io` when the port is open, and `G ok` after
+the Genesis handshake.
 
 ## Genesis M0 Hardware Spike
 
@@ -90,5 +97,5 @@ cd ..\..
 python tools\serial_spike_host.py --port COM20
 ```
 
-Norns sees the Genesis Mini as `/dev/ttyACM0`. The next implementation step is
-the Norns-side serial adapter that streams authoritative `GAME_STATE` messages.
+Norns sees the Genesis Mini as `/dev/ttyACM0`. The Norns-side serial adapter
+streams authoritative `GAME_STATE` messages from the vertical slice.

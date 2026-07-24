@@ -17,7 +17,7 @@ local function bar(x, y, w, h, value)
   screen.fill()
 end
 
-function Render.redraw(game, drone)
+function Render.redraw(game, drone, genesis)
   if screen == nil then
     return
   end
@@ -72,8 +72,18 @@ function Render.redraw(game, drone)
   screen.move(78, 8)
   screen.text(string.format("%dhz", math.floor(drone.root_hz)))
 
+  local genesis_label = "G --"
+  if genesis and genesis.connected then
+    genesis_label = "G ok"
+  elseif genesis and genesis:is_open() then
+    genesis_label = "G io"
+  end
+
+  screen.level(genesis and genesis:is_open() and 10 or 3)
+  screen.move(104, 8)
+  screen.text(genesis_label)
+
   screen.update()
 end
 
 return Render
-

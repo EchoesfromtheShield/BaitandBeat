@@ -2,17 +2,27 @@ engine.name = "PolyPerc"
 
 local Config = include("abyssal_line/lib/config")
 local Game = include("abyssal_line/lib/game")
+local GenesisSerial = include("abyssal_line/lib/genesis_serial")
 local Music = include("abyssal_line/lib/music")
 local Render = include("abyssal_line/lib/render")
 
 local game = nil
+local genesis = nil
 local redraw_dirty = true
 
 local function loop()
   while true do
     clock.sleep(Config.TICK_S)
+    if genesis and genesis:poll(game) then
+      redraw_dirty = true
+    end
+
     local events = game:update(Config.TICK_S)
     Music.tick(game, events)
+    if genesis then
+      genesis:tick(Config.TICK_S, game, Music.drone_params(game), events)
+    end
+
     redraw_dirty = true
     redraw()
   end
@@ -20,6 +30,8 @@ end
 
 function init()
   game = Game.new(Config)
+  genesis = GenesisSerial.new(Config)
+  genesis:open()
   clock.run(loop)
 end
 
@@ -42,7 +54,6 @@ function redraw()
     return
   end
 
-  Render.redraw(game, Music.drone_params(game))
+  Render.redraw(game, Music.drone_params(game), genesis)
   redraw_dirty = false
 end
-

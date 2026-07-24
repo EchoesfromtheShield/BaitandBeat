@@ -18,5 +18,10 @@ Config.CAPTURE_RATE = 0.055
 
 Config.BASE_DRONE_HZ = 55
 
-return Config
+Config.SERIAL_ENABLED = true
+Config.SERIAL_DEVICE = "/dev/ttyACM0"
+Config.SERIAL_BAUD = 115200
+Config.SERIAL_STATE_INTERVAL_S = 0.2
+Config.SERIAL_MAX_LINES_PER_TICK = 8
 
+return Config
