@@ -1,7 +1,6 @@
 local Music = {}
 
-local last_drone_t = 0
-local last_fifth_t = 0
+local drone_send_t = 0
 
 local function clamp(value, lo, hi)
   if value < lo then
@@ -13,14 +12,31 @@ local function clamp(value, lo, hi)
   return value
 end
 
+local function has_engine_command(name)
+  return engine ~= nil and engine[name] ~= nil
+end
+
+local function strike_kind(name)
+  if name == "small_tug" then
+    return 0
+  end
+  if name == "long_pull" then
+    return 1
+  end
+  if name == "vibration" then
+    return 2
+  end
+  return 3
+end
+
 function Music.drone_params(game)
   local depth = game.depth or 0
   local signal = game.signal or 0
   local depth_signal = game.depth_signal or signal
   local fish = (game.overlap_signal or 0) * depth_signal
   local pressure = depth
-  local brightness = clamp(1 - depth * 0.65 + signal * 0.18 + fish * 0.22, 0, 1)
-  local root_hz = game.config.BASE_DRONE_HZ * (1 + depth * 0.9)
+  local brightness = clamp(1 - depth * 0.72 + signal * 0.18 + fish * 0.26, 0, 1)
+  local root_hz = game.config.BASE_DRONE_HZ * (1 + depth * 0.72)
 
   return {
     root_hz = root_hz,
@@ -33,17 +49,40 @@ function Music.drone_params(game)
   }
 end
 
-local function event_hz(name, base)
-  if name == "small_tug" then
-    return base * 2
+function Music.init()
+  drone_send_t = 0
+  if has_engine_command("clear_layers") then
+    engine.clear_layers()
   end
-  if name == "long_pull" then
-    return base * 0.75
+  if has_engine_command("start") then
+    engine.start()
   end
-  if name == "vibration" then
-    return base * 3
+end
+
+function Music.cleanup()
+  if has_engine_command("stop") then
+    engine.stop()
   end
-  return base
+end
+
+function Music.capture_layer(event, drone)
+  if not has_engine_command("capture_layer") then
+    return
+  end
+
+  local layer = event.layer or {}
+  local slot = ((event.layer_index or 1) - 1) % 3 + 1
+  local fight_time = math.max(layer.fight_time or 10, 0.1)
+  local event_count = layer.event_count or 1
+  local density = clamp(event_count / fight_time, 0.05, 2.8)
+  local avg_tension = clamp(layer.avg_tension or 0.4, 0, 1)
+  local max_tension = clamp(layer.max_tension or avg_tension, 0, 1)
+  local texture = clamp(avg_tension * 0.65 + max_tension * 0.35, 0, 1)
+  local rate = 0.12 + density * 0.85
+  local pan = ({ -0.48, 0.42, 0.0 })[slot] or 0
+  local amp = 0.08 + math.min(slot, 3) * 0.012
+
+  engine.capture_layer(slot, drone.root_hz, rate, texture, pan, amp)
 end
 
 function Music.tick(game, events)
@@ -52,51 +91,34 @@ function Music.tick(game, events)
   end
 
   local drone = Music.drone_params(game)
-  last_drone_t = last_drone_t + game.config.TICK_S
+  drone_send_t = drone_send_t + game.config.TICK_S
 
-  if game.state ~= "CAST" and last_drone_t >= 0.45 then
-    last_drone_t = 0
-    if engine.amp then
-      engine.amp(0.12 + drone.pressure_0_1 * 0.08)
-    end
-    if engine.release then
-      engine.release(1.4)
-    end
-    if engine.hz then
-      engine.hz(drone.root_hz)
-    end
-  end
-
-  last_fifth_t = last_fifth_t + game.config.TICK_S
-  if (game.state == "RESONANCE" or game.state == "STRUGGLE")
-      and drone.fish_0_1 > 0.06 then
-    local interval = 0.22 + (1 - drone.fish_0_1) * 0.46
-    if last_fifth_t >= interval then
-      last_fifth_t = 0
-      if engine.amp then
-        engine.amp(0.04 + drone.fish_0_1 * 0.13)
-      end
-      if engine.release then
-        engine.release(0.45 + drone.fish_0_1 * 0.35)
-      end
-      if engine.hz then
-        engine.hz(drone.fifth_hz)
-      end
-    end
-  else
-    last_fifth_t = 0
+  if has_engine_command("drone") and drone_send_t >= 0.08 then
+    drone_send_t = 0
+    local amp = game.state == "CAST" and 0.0 or 0.26 + drone.pressure_0_1 * 0.08
+    engine.drone(
+      drone.root_hz,
+      clamp(game.depth or 0, 0, 1),
+      drone.brightness_0_1,
+      drone.pressure_0_1,
+      drone.signal_0_1,
+      drone.fish_0_1,
+      amp
+    )
   end
 
   for _, event in ipairs(events) do
-    if event.type == "pattern" and engine.hz then
-      local hz = event_hz(event.name, drone.root_hz)
-      if engine.amp then
-        engine.amp(0.10 + (event.tension or 0) * 0.18)
-      end
-      if engine.release then
-        engine.release(event.name == "long_pull" and 0.8 or 0.15)
-      end
-      engine.hz(hz)
+    if event.type == "pattern" and has_engine_command("strike") then
+      local pan = ((game.fish_x or 0.5) - 0.5) * 1.4
+      engine.strike(
+        strike_kind(event.name),
+        drone.root_hz,
+        clamp(event.pull or 0, 0, 1),
+        clamp(event.tension or game.tension or 0, 0, 1),
+        clamp(pan, -1, 1)
+      )
+    elseif event.type == "surface" and event.name == "captured" then
+      Music.capture_layer(event, drone)
     end
   end
 end

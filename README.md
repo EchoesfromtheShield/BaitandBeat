@@ -28,7 +28,7 @@ mutation tree, or multi-page Genesis UI.
 docs/                         Active design and milestone docs
 protocol/                     Transport-independent logical protocol
 protocol/fixtures/            Example messages for M0 spike testing
-norns/abyssal_line/           Norns script skeleton and Lua modules
+norns/abyssal_line/           Norns script, Lua modules, and custom SC engine
 genesis/abyssal_line_controller/
                               Hardware-dependent implementation placeholder
 tools/                        Host-side simulators and utilities
@@ -55,6 +55,9 @@ The Norns folder contains a first script skeleton:
 ```text
 norns/abyssal_line/abyssal_line.lua
 ```
+
+The script now loads the custom `AbyssalLine` SuperCollider engine from
+`norns/abyssal_line/lib/Engine_AbyssalLine.sc`.
 
 The local Norns fallback controls are:
 

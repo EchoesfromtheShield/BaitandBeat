@@ -80,6 +80,9 @@ function Game.new(config)
     tension = 0.0,
     slack_timer = 0.0,
     overload_timer = 0.0,
+    fight_tension_sum = 0.0,
+    fight_tension_samples = 0,
+    fight_max_tension = 0.0,
     capture_progress = 0.0,
     captured_layers = {},
     captured_events = {},
@@ -126,6 +129,9 @@ function Game:press()
     self.fish_burst_timer = 0
     self.bite_ready = false
     self.captured_events = {}
+    self.fight_tension_sum = 0
+    self.fight_tension_samples = 0
+    self.fight_max_tension = 0
     self.last_reason = "hooked"
     return
   end
@@ -146,6 +152,9 @@ function Game:reset_to_explore()
   self.tension = 0
   self.slack_timer = 0
   self.overload_timer = 0
+  self.fight_tension_sum = 0
+  self.fight_tension_samples = 0
+  self.fight_max_tension = 0
   self.capture_progress = 0
   self.creature_depth = clamp(0.58 + (#self.captured_layers * 0.09), 0.2, 0.86)
   self.hooked_depth = self.creature_depth
@@ -258,6 +267,9 @@ function Game:_update_struggle(dt, events)
   local target = clamp(ascent_depth + pull_offset, 0, 1)
   self.fish_depth = self.fish_depth + (target - self.fish_depth) * 0.18
   self.tension = clamp(math.abs(self.fish_depth - self.line_depth) * 2.6, 0, 1)
+  self.fight_tension_sum = self.fight_tension_sum + self.tension
+  self.fight_tension_samples = self.fight_tension_samples + 1
+  self.fight_max_tension = math.max(self.fight_max_tension, self.tension)
 
   if self.tension < self.config.SLACK_TENSION then
     self.slack_timer = self.slack_timer + dt
@@ -286,13 +298,26 @@ function Game:_update_struggle(dt, events)
   end
 
   if self.capture_progress >= 1 then
-    table.insert(self.captured_layers, {
+    local avg_tension = self.tension
+    if self.fight_tension_samples > 0 then
+      avg_tension = self.fight_tension_sum / self.fight_tension_samples
+    end
+
+    local layer = {
       event_count = #self.captured_events,
       fight_time = self.fight_time,
-    })
+      avg_tension = avg_tension,
+      max_tension = self.fight_max_tension,
+    }
+    table.insert(self.captured_layers, layer)
     self.state = "SURFACE"
     self.last_reason = "captured"
-    table.insert(events, { type = "surface", name = "captured" })
+    table.insert(events, {
+      type = "surface",
+      name = "captured",
+      layer_index = #self.captured_layers,
+      layer = layer,
+    })
   end
 end
 

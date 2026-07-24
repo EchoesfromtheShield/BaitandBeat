@@ -25,11 +25,11 @@ Required:
 
 - `CAST`, `EXPLORE`, `RESONANCE`, `STRUGGLE`, `SURFACE`;
 - local controls using Norns keys/encoders;
-- depth-driven drone proxy;
+- depth-driven continuous drone;
 - resonance near one hidden creature;
 - bite after stillness in the bite zone;
 - tension, slack, overload, capture progress;
-- one captured layer.
+- one captured persistent audio layer.
 
 Exit gate: the loop is playable with only Norns controls.
 
@@ -60,4 +60,3 @@ Required:
 - no additional game systems added.
 
 Exit gate: record a short session and decide whether to continue or redesign.
-

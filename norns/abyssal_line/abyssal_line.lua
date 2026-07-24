@@ -1,4 +1,4 @@
-engine.name = "PolyPerc"
+engine.name = "AbyssalLine"
 
 local Config = include("abyssal_line/lib/config")
 local Game = include("abyssal_line/lib/game")
@@ -30,9 +30,14 @@ end
 
 function init()
   game = Game.new(Config)
+  Music.init()
   genesis = GenesisSerial.new(Config)
   genesis:open()
   clock.run(loop)
+end
+
+function cleanup()
+  Music.cleanup()
 end
 
 function enc(n, delta)
