@@ -32,6 +32,28 @@ def read_until(port: serial.Serial, stop_at: float) -> None:
             print("GENESIS>", raw.decode("utf-8", errors="replace").strip(), flush=True)
 
 
+def wait_for_ready(port: serial.Serial, timeout_s: float = 3.0) -> None:
+    stop_at = time.monotonic() + timeout_s
+    saw_anything = False
+
+    while time.monotonic() < stop_at:
+        raw = port.readline()
+        if not raw:
+            continue
+
+        text = raw.decode("utf-8", errors="replace").strip()
+        if text:
+            saw_anything = True
+            print("GENESIS>", text, flush=True)
+        if "\"type\":\"PIN_PROBE_HELLO\"" in text:
+            return
+
+    if saw_anything:
+        print("No PIN_PROBE_HELLO seen; continuing with current serial session.", flush=True)
+    else:
+        print("No probe output seen before command; continuing anyway.", flush=True)
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Command-driven pin probe helper.")
     parser.add_argument("--port", default="COM20")
@@ -45,6 +67,7 @@ def main() -> None:
         "slot3_io1",
         "slot3_io2",
     ])
+    parser.add_argument("--scan", choices=["slot2", "slot3"], help="Pulse every candidate pin in a slot.")
     parser.add_argument("--level", choices=["HIGH", "LOW"], default="HIGH")
     parser.add_argument("--ms", type=int, default=1500)
     parser.add_argument("--snapshot", action="store_true")
@@ -55,10 +78,31 @@ def main() -> None:
 
     with serial.Serial(args.port, args.baud, timeout=0.05) as ser:
         time.sleep(0.2)
+        wait_for_ready(ser)
         stop_at = time.monotonic() + args.duration
 
         if args.snapshot:
             seq = write_message(ser, seq, "PIN_PROBE_SNAPSHOT", {})
+
+        if args.scan:
+            labels = [f"{args.scan}_io0", f"{args.scan}_io1", f"{args.scan}_io2"]
+            levels = ["HIGH", "LOW"]
+            for label in labels:
+                for level in levels:
+                    print(f"\nWATCH NOW: {label} {level} for {args.ms} ms", flush=True)
+                    seq = write_message(
+                        ser,
+                        seq,
+                        "PIN_PROBE_PULSE",
+                        {
+                            "label": label,
+                            "level": level,
+                            "duration_ms": args.ms,
+                        },
+                    )
+                    read_until(ser, time.monotonic() + (args.ms / 1000.0) + 0.5)
+            write_message(ser, seq, "PIN_PROBE_STOP", {})
+            return
 
         if args.pulse:
             seq = write_message(
@@ -80,4 +124,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

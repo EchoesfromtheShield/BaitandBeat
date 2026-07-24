@@ -30,26 +30,23 @@ to ground could stress the pin if that same line is being driven high.
 
 ### Output Pins
 
-Run one pulse at a time from the repo root:
+Run a slot scan from the repo root:
 
 ```powershell
-python tools\pin_probe_tool.py --port COM20 --pulse slot2_io0 --level HIGH --ms 2000 --duration 3
-python tools\pin_probe_tool.py --port COM20 --pulse slot2_io0 --level LOW  --ms 2000 --duration 3
-python tools\pin_probe_tool.py --port COM20 --pulse slot2_io1 --level HIGH --ms 2000 --duration 3
-python tools\pin_probe_tool.py --port COM20 --pulse slot2_io1 --level LOW  --ms 2000 --duration 3
-python tools\pin_probe_tool.py --port COM20 --pulse slot2_io2 --level HIGH --ms 2000 --duration 3
-python tools\pin_probe_tool.py --port COM20 --pulse slot2_io2 --level LOW  --ms 2000 --duration 3
-
-python tools\pin_probe_tool.py --port COM20 --pulse slot3_io0 --level HIGH --ms 2000 --duration 3
-python tools\pin_probe_tool.py --port COM20 --pulse slot3_io1 --level HIGH --ms 2000 --duration 3
-python tools\pin_probe_tool.py --port COM20 --pulse slot3_io2 --level HIGH --ms 2000 --duration 3
+python tools\pin_probe_tool.py --port COM20 --scan slot2 --ms 2500
 ```
 
-For each command:
+For each `WATCH NOW` line:
 
 - note whether the LED changes;
 - note whether the motor vibrates;
 - keep the printed `PIN_PROBE_OUTPUT` line.
+
+Then scan the motor slot:
+
+```powershell
+python tools\pin_probe_tool.py --port COM20 --scan slot3 --ms 2500
+```
 
 ### Input Pins
 
