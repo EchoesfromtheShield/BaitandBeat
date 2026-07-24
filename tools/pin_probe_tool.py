@@ -25,28 +25,44 @@ def write_message(port: serial.Serial, seq: int, message_type: str, payload: dic
     return seq + 1
 
 
-def read_until(port: serial.Serial, stop_at: float) -> None:
-    while time.monotonic() < stop_at:
-        raw = port.readline()
-        if raw:
-            print("GENESIS>", raw.decode("utf-8", errors="replace").strip(), flush=True)
+class LineReader:
+    def __init__(self, port: serial.Serial) -> None:
+        self.port = port
+        self.buffer = b""
+
+    def poll_until(self, stop_at: float) -> list[str]:
+        lines: list[str] = []
+        while time.monotonic() < stop_at:
+            chunk = self.port.read(self.port.in_waiting or 1)
+            if not chunk:
+                continue
+
+            self.buffer += chunk
+            while b"\n" in self.buffer:
+                raw_line, self.buffer = self.buffer.split(b"\n", 1)
+                text = raw_line.decode("utf-8", errors="replace").strip("\r")
+                if text:
+                    lines.append(text)
+                    print("GENESIS>", text, flush=True)
+        return lines
+
+    def flush_partial(self) -> None:
+        if self.buffer.strip():
+            text = self.buffer.decode("utf-8", errors="replace").strip()
+            print("GENESIS_PARTIAL>", text, flush=True)
+        self.buffer = b""
 
 
-def wait_for_ready(port: serial.Serial, timeout_s: float = 3.0) -> None:
+def wait_for_ready(reader: LineReader, timeout_s: float = 3.0) -> None:
     stop_at = time.monotonic() + timeout_s
     saw_anything = False
 
     while time.monotonic() < stop_at:
-        raw = port.readline()
-        if not raw:
-            continue
-
-        text = raw.decode("utf-8", errors="replace").strip()
-        if text:
+        lines = reader.poll_until(time.monotonic() + 0.1)
+        for text in lines:
             saw_anything = True
-            print("GENESIS>", text, flush=True)
-        if "\"type\":\"PIN_PROBE_HELLO\"" in text:
-            return
+            if "\"type\":\"PIN_PROBE_HELLO\"" in text:
+                return
 
     if saw_anything:
         print("No PIN_PROBE_HELLO seen; continuing with current serial session.", flush=True)
@@ -78,7 +94,8 @@ def main() -> None:
 
     with serial.Serial(args.port, args.baud, timeout=0.05) as ser:
         time.sleep(0.2)
-        wait_for_ready(ser)
+        reader = LineReader(ser)
+        wait_for_ready(reader)
         stop_at = time.monotonic() + args.duration
 
         if args.snapshot:
@@ -100,8 +117,9 @@ def main() -> None:
                             "duration_ms": args.ms,
                         },
                     )
-                    read_until(ser, time.monotonic() + (args.ms / 1000.0) + 0.5)
+                    reader.poll_until(time.monotonic() + (args.ms / 1000.0) + 0.5)
             write_message(ser, seq, "PIN_PROBE_STOP", {})
+            reader.flush_partial()
             return
 
         if args.pulse:
@@ -116,7 +134,8 @@ def main() -> None:
                 },
             )
 
-        read_until(ser, stop_at)
+        reader.poll_until(stop_at)
+        reader.flush_partial()
 
         if args.pulse:
             write_message(ser, seq, "PIN_PROBE_STOP", {})

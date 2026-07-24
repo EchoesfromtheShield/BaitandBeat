@@ -75,7 +75,7 @@ void sendInputSnapshot(const char* reason) {
 
 void readInputs() {
   const uint32_t now = millis();
-  if ((now - lastReadMs) < 20) {
+  if ((now - lastReadMs) < 20 || outputActive) {
     return;
   }
   lastReadMs = now;
@@ -94,13 +94,13 @@ void readInputs() {
   }
 }
 
-void sendOutputEvent(const PinDef& pin, bool active, bool levelHigh) {
+void sendOutputEvent(const PinDef& pin, bool active, const char* level) {
   String payload = "{\"label\":\"";
   payload += pin.label;
   payload += "\",\"gpio\":";
   payload += pin.pin;
   payload += ",\"level\":\"";
-  payload += levelHigh ? "HIGH" : "LOW";
+  payload += level;
   payload += "\"";
   payload += ",\"active\":";
   payload += active ? "true" : "false";
@@ -152,7 +152,7 @@ void stopPulse() {
   pinMode(pin.pin, INPUT_PULLUP);
   outputActive = false;
   pulseUntilMs = 0;
-  sendOutputEvent(pin, false, true);
+  sendOutputEvent(pin, false, "FLOAT");
   pulsedOutputIndex = -1;
 }
 
@@ -165,7 +165,7 @@ void startPulse(int8_t index, bool levelHigh, uint32_t durationMs) {
   outputActive = true;
   pulsedOutputIndex = index;
   pulseUntilMs = millis() + durationMs;
-  sendOutputEvent(pin, true, levelHigh);
+  sendOutputEvent(pin, true, levelHigh ? "HIGH" : "LOW");
 }
 
 void handleCommand(const String& line) {
