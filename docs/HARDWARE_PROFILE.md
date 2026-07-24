@@ -8,7 +8,7 @@
 - MCU module: ESP32-S3-Mini-N4R2
 - Development path for M0: PlatformIO + Arduino framework
 - Current USB serial port on development PC: `COM20`
-- Norns USB host test: not run yet
+- Norns USB host test: passed as `/dev/ttyACM0`
 
 Official references checked:
 
@@ -26,6 +26,19 @@ Official references checked:
 | Slot 3 | Vibration motor ERM | Fishing haptic feedback |
 
 The separate LED button is the M0 action button. The encoder press is not used.
+
+## Module Signal Reference
+
+Current Axiometa module reference:
+
+| Module | Signal | Meaning |
+| --- | --- | --- |
+| AX22-0003 rotary encoder | P1_IO0 | Button, HIGH = pressed |
+| AX22-0003 rotary encoder | P1_IO1 | CLK |
+| AX22-0003 rotary encoder | P1_IO2 | DT |
+| AX22-0050 tactile LED button | P2_IO1 | Button, LOW = pressed |
+| AX22-0050 tactile LED button | P2_IO2 | LED, HIGH = on |
+| AX22-0013 ERM motor | P3_IO1 | Motor, HIGH = run, PWM capable |
 
 ## AX22 Port GPIO Map
 
@@ -51,26 +64,36 @@ Shared AX22 bus lines:
 
 ## M0 Pin Assignment
 
+The first probe session showed the LED button illuminating on the firmware label
+`slot3_io2` / GPIO5, not on the initial `slot2_io2` assumption. Until the full
+physical-port-to-GPIO map is verified, M0 uses the observed LED button mapping
+and keeps the ERM motor disabled.
+
 | Function | Slot | Module signal | GPIO |
 | --- | --- | --- | --- |
 | Encoder A/CLK | 1 | IO1 | GPIO16 |
 | Encoder B/DT | 1 | IO2 | GPIO15 |
 | Encoder push | 1 | IO0 | GPIO9, unused |
-| Action button | 2 | IO1 | GPIO17 |
-| Button LED | 2 | IO2 | GPIO18 |
-| Vibration motor | 3 | IO1 | GPIO6 |
+| Action button | observed LED-button port | IO1 | GPIO6, pending confirmation |
+| Button LED | observed LED-button port | IO2 | GPIO5, verified |
+| Vibration motor | pending | IO1 | disabled in M0 |
 
-The button and vibration assignments follow the public module examples and
-schematics. If the first upload proves a signal is on IO0 or IO2 instead, only
-`genesis/abyssal_line_controller/include/HardwareConfig.h` should change.
+The ERM module should use pulses of at least 50 ms once its GPIO is known.
+Variable intensity can later use PWM; do not add it to M0 before basic
+serial/encoder/button/LED behavior is stable.
 
 ## Transport Assumption For First Test
 
 Use USB CDC serial first because the board already enumerates as `COM20`.
 
-The communication spike still needs to prove:
+The communication spike has proved:
 
 - Norns sees the board as a usable serial device;
 - bidirectional JSON lines are stable at 5 to 10 Hz;
 - reconnect triggers a clean handshake and state resync.
 
+Open hardware confirmations:
+
+- encoder A/B movement on the final M0 firmware;
+- action button input on GPIO6;
+- ERM motor GPIO.

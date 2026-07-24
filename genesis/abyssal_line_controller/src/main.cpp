@@ -287,6 +287,10 @@ void setLed(bool on) {
 }
 
 void setMotor(bool on) {
+  if (!HardwareConfig::HAS_VIBRATION_MOTOR) {
+    return;
+  }
+
   digitalWrite(
     HardwareConfig::VIBRATION_MOTOR_PIN,
     on == HardwareConfig::ACTIVE_HIGH_MOTOR ? HIGH : LOW
@@ -294,6 +298,10 @@ void setMotor(bool on) {
 }
 
 void pulseMotor(uint16_t durationMs) {
+  if (!HardwareConfig::HAS_VIBRATION_MOTOR) {
+    return;
+  }
+
   const uint32_t until = millis() + static_cast<uint32_t>(durationMs);
   motorUntilMs = motorUntilMs > until ? motorUntilMs : until;
 }
@@ -322,7 +330,7 @@ void sendHello() {
     "HELLO",
     "{\"device_role\":\"genesis\",\"firmware\":\"abyssal-line-m0-serial\","
     "\"board\":\"genesis-mini-v1-rev2\","
-    "\"capabilities\":[\"encoder\",\"button_led\",\"vibration\",\"usb_cdc_serial\"]}"
+    "\"capabilities\":[\"encoder\",\"button_led\",\"usb_cdc_serial\"]}"
   );
 }
 
@@ -505,7 +513,9 @@ void updateFeedback() {
   if (motorUntilMs > 0 && now >= motorUntilMs) {
     motorUntilMs = 0;
   }
-  setMotor(motorUntilMs > now);
+  if (HardwareConfig::HAS_VIBRATION_MOTOR) {
+    setMotor(motorUntilMs > now);
+  }
 
   bool desiredLed = ledUntilMs > now;
 
@@ -554,7 +564,9 @@ void setup() {
   pinMode(HardwareConfig::ENCODER_B_PIN, INPUT_PULLUP);
   pinMode(HardwareConfig::ACTION_BUTTON_PIN, INPUT_PULLUP);
   pinMode(HardwareConfig::ACTION_LED_PIN, OUTPUT);
-  pinMode(HardwareConfig::VIBRATION_MOTOR_PIN, OUTPUT);
+  if (HardwareConfig::HAS_VIBRATION_MOTOR) {
+    pinMode(HardwareConfig::VIBRATION_MOTOR_PIN, OUTPUT);
+  }
 
   setLed(false);
   setMotor(false);

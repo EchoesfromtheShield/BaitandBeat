@@ -5,7 +5,7 @@ Use this when a module does not react on the assumed GPIO assignment.
 The pin-probe firmware does two things:
 
 - reports all slot 1/2/3 input pin changes over serial;
-- pulses a requested slot 2 or slot 3 local IO pin on command.
+- pulses a requested slot 2, slot 3, or slot 4 local IO pin on command.
 
 This identifies:
 
@@ -55,6 +55,15 @@ GPIO map.
 ```powershell
 python tools\pin_probe_tool.py --port COM20 --scan slot4 --ms 2500
 ```
+
+Current known observation:
+
+- `slot3_io2` / GPIO5 illuminates the tactile button LED.
+- The ERM motor has not produced a visible buzz yet.
+
+Do not spend more time on the ERM during M0 unless the core serial, encoder,
+button, and LED behavior are already stable. When probing the ERM again, use
+2500 ms pulses; ERM pulses shorter than roughly 50 ms can be imperceptible.
 
 ### Input Pins
 

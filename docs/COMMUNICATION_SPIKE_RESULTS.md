@@ -1,6 +1,7 @@
 # Communication Spike Results
 
-Status: partially passed on development PC. Norns USB host test is still open.
+Status: passed for USB serial transport on development PC and Norns. Physical
+module mapping is still partially open.
 
 Date: 2026-07-24
 
@@ -14,6 +15,7 @@ Date: 2026-07-24
 - MAC: d0:cf:13:07:88:e8
 - Development PC port: `COM20`
 - USB mode reported by esptool: USB-Serial/JTAG
+- Norns port: `/dev/ttyACM0`
 
 Connected modules:
 
@@ -55,26 +57,60 @@ Observed:
 The firmware sends `DEBUG_RX` during M0 so the bidirectional path is visible in
 plain logs. This can be removed or gated once Norns integration is stable.
 
+## Norns Round Trip
+
+Norns detected the Genesis Mini as:
+
+```text
+/dev/ttyACM0
+```
+
+Kernel log:
+
+```text
+idVendor=303a, idProduct=1001
+Product: USB JTAG/serial debug unit
+Manufacturer: Espressif
+ttyACM0: USB ACM device
+```
+
+Manual JSON-line test confirmed:
+
+- Genesis sends `HELLO`;
+- Norns can write `HELLO_ACK`;
+- Genesis replies with `DEBUG_RX` for `HELLO_ACK`;
+- Norns can write `GAME_STATE`;
+- Genesis replies with `DEBUG_RX` for `GAME_STATE`.
+
+Repeated `HELLO` messages after a single test `GAME_STATE` are expected because
+the firmware returns to discovery when it does not receive a live state stream.
+
+## Physical Module Probe
+
+Current observed result:
+
+- Button LED reacted on probe label `slot3_io2` / GPIO5.
+- ERM motor has not reacted on the tested pins.
+
+For the M0 firmware, haptics are disabled and the LED button uses the observed
+LED-button port. This keeps the communication spike moving while the exact ERM
+GPIO remains unresolved.
+
 ## Current Limitations
 
-- Physical encoder movement was not verified by Codex because it requires
-  someone to turn the knob during the host test.
-- Physical LED button press was not verified by Codex for the same reason.
-- Haptic feedback cannot be confirmed remotely; the firmware does pulse the
-  motor on connection, button press, bite-ready, and pattern events.
-- Norns enumeration has not been tested.
-- Norns-side serial adapter is not committed yet because the actual device path
-  and Norns access mode are unknown.
+- Physical encoder movement still needs verification on the final M0 firmware.
+- Physical LED button input still needs verification; LED output is verified on
+  GPIO5.
+- Haptic feedback is intentionally disabled in M0 until the ERM GPIO is found.
+- Norns-side serial adapter is not committed yet.
 
 ## Selected Transport For Next Test
 
 USB serial remains the leading candidate. It is already bidirectional on the
 development PC and easy to log.
 
-Do not close M0 until Norns also proves:
+Do not close M0 until the Norns script also proves:
 
-- device enumeration;
 - read/write line protocol;
 - 5 to 10 Hz `GAME_STATE`;
 - disconnect/reconnect and resync.
-
