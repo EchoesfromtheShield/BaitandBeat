@@ -16,6 +16,7 @@
 constexpr unsigned long MOTOR_TEST_MS = 1200;
 constexpr unsigned long LED_TEST_MS = 1200;
 constexpr unsigned long DEBOUNCE_MS = 80;
+constexpr unsigned long PINMAP_REPEAT_MS = 3000;
 
 RotaryEncoder encoder(ENC_CLK, ENC_DT, RotaryEncoder::LatchMode::TWO03);
 
@@ -24,6 +25,7 @@ bool lastButtonLevel = HIGH;
 unsigned long lastButtonAt = 0;
 unsigned long motorOffAt = 0;
 unsigned long ledOffAt = 0;
+unsigned long lastPinMapAt = 0;
 
 void printPin(const char* label, int pin) {
   Serial.print(label);
@@ -51,6 +53,29 @@ void printPinMap() {
   printPin("BTN_LED", BTN_LED);
   printPin("MOTOR", MOTOR);
   Serial.println("PIN_FINGERPRINT_END");
+}
+
+void printHeartbeatPinMap() {
+  Serial.print("PINMAP_JSON {");
+  Serial.print("\"P1_IO0_PIN\":"); Serial.print((int)P1_IO0); Serial.print(",");
+  Serial.print("\"P1_IO1_PIN\":"); Serial.print((int)P1_IO1); Serial.print(",");
+  Serial.print("\"P1_IO2_PIN\":"); Serial.print((int)P1_IO2); Serial.print(",");
+  Serial.print("\"P2_IO0_PIN\":"); Serial.print((int)P2_IO0); Serial.print(",");
+  Serial.print("\"P2_IO1_PIN\":"); Serial.print((int)P2_IO1); Serial.print(",");
+  Serial.print("\"P2_IO2_PIN\":"); Serial.print((int)P2_IO2); Serial.print(",");
+  Serial.print("\"P3_IO0_PIN\":"); Serial.print((int)P3_IO0); Serial.print(",");
+  Serial.print("\"P3_IO1_PIN\":"); Serial.print((int)P3_IO1); Serial.print(",");
+  Serial.print("\"P3_IO2_PIN\":"); Serial.print((int)P3_IO2); Serial.print(",");
+  Serial.print("\"P4_IO0_PIN\":"); Serial.print((int)P4_IO0); Serial.print(",");
+  Serial.print("\"P4_IO1_PIN\":"); Serial.print((int)P4_IO1); Serial.print(",");
+  Serial.print("\"P4_IO2_PIN\":"); Serial.print((int)P4_IO2); Serial.print(",");
+  Serial.print("\"P1_IO0_READ\":"); Serial.print(digitalRead(P1_IO0)); Serial.print(",");
+  Serial.print("\"P1_IO1_READ\":"); Serial.print(digitalRead(P1_IO1)); Serial.print(",");
+  Serial.print("\"P1_IO2_READ\":"); Serial.print(digitalRead(P1_IO2)); Serial.print(",");
+  Serial.print("\"P2_IO1_READ\":"); Serial.print(digitalRead(P2_IO1)); Serial.print(",");
+  Serial.print("\"P2_IO2_READ\":"); Serial.print(digitalRead(P2_IO2)); Serial.print(",");
+  Serial.print("\"P3_IO1_READ\":"); Serial.print(digitalRead(P3_IO1));
+  Serial.println("}");
 }
 
 void startMotor(const char* reason, unsigned long durationMs) {
@@ -89,6 +114,11 @@ void setup() {
 
 void loop() {
   const unsigned long now = millis();
+
+  if ((now - lastPinMapAt) >= PINMAP_REPEAT_MS) {
+    lastPinMapAt = now;
+    printHeartbeatPinMap();
+  }
 
   encoder.tick();
   const long pos = encoder.getPosition();

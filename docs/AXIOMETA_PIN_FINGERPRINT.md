@@ -26,27 +26,61 @@ MOTOR=...
 Paste this prompt into Axiometa Studio:
 
 ```text
-Build a diagnostic firmware for Genesis Mini Version 1 Rev 2.
+Build a diagnostic firmware for Axiometa Genesis Mini Version 1 Rev 2.
 
 Modules:
 - Rotary Encoder AX22-0003 on P1
 - Tactile LED Button AX22-0050 on P2
 - Vibration Motor ERM AX22-0013 on P3
 
-On boot, print the numeric values of these Arduino pin constants to Serial at
-115200 baud:
-P1_IO0, P1_IO1, P1_IO2,
-P2_IO0, P2_IO1, P2_IO2,
-P3_IO0, P3_IO1, P3_IO2,
-P4_IO0, P4_IO1, P4_IO2.
+Goal:
+I need the exact numeric Arduino pin values behind the official Axiometa macros.
+Do not guess GPIO numbers. Use the official constants directly.
+
+Serial:
+- Use Serial.begin(115200).
+- Every 3000 ms print one single-line JSON object prefixed by PINMAP_JSON.
+- The JSON must contain numeric macro values with names ending in _PIN.
+- The JSON must also contain digitalRead values with names ending in _READ.
+- Do not use the same key for a pin number and a digital read value.
+
+Required repeated output format:
+
+PINMAP_JSON {
+  "P1_IO0_PIN": <numeric value of P1_IO0>,
+  "P1_IO1_PIN": <numeric value of P1_IO1>,
+  "P1_IO2_PIN": <numeric value of P1_IO2>,
+  "P2_IO0_PIN": <numeric value of P2_IO0>,
+  "P2_IO1_PIN": <numeric value of P2_IO1>,
+  "P2_IO2_PIN": <numeric value of P2_IO2>,
+  "P3_IO0_PIN": <numeric value of P3_IO0>,
+  "P3_IO1_PIN": <numeric value of P3_IO1>,
+  "P3_IO2_PIN": <numeric value of P3_IO2>,
+  "P4_IO0_PIN": <numeric value of P4_IO0>,
+  "P4_IO1_PIN": <numeric value of P4_IO1>,
+  "P4_IO2_PIN": <numeric value of P4_IO2>,
+  "P1_IO0_READ": digitalRead(P1_IO0),
+  "P1_IO1_READ": digitalRead(P1_IO1),
+  "P1_IO2_READ": digitalRead(P1_IO2),
+  "P2_IO1_READ": digitalRead(P2_IO1),
+  "P2_IO2_READ": digitalRead(P2_IO2),
+  "P3_IO1_READ": digitalRead(P3_IO1)
+}
 
 Then:
 - when I press the tactile LED button, print BUTTON_PRESS, turn P2_IO2 HIGH for
-  1200 ms, and turn P3_IO1 HIGH for 1200 ms;
-- when I turn the encoder, print ENCODER_TICK and turn P3_IO1 HIGH for 1200 ms;
-- always print which numeric pin is being driven for the motor.
+  1200 ms, and print LED_HIGH pin=<numeric value of P2_IO2>;
+- on the same button press, turn P3_IO1 HIGH for 1200 ms, print
+  MOTOR_HIGH pin=<numeric value of P3_IO1>, then print MOTOR_LOW pin=<numeric
+  value of P3_IO1>;
+- when I turn the encoder, print ENCODER_TICK position=<position>, then turn
+  P3_IO1 HIGH for 1200 ms and print MOTOR_HIGH/MOTOR_LOW with the numeric pin;
+- when the encoder button is pressed, print ENCODER_BUTTON_PRESS pin=<numeric
+  value of P1_IO0>.
 
 Do not use PWM. Use digitalWrite(P3_IO1, HIGH) and digitalWrite(P3_IO1, LOW).
+Do not use delay() except optionally a one second startup delay after
+Serial.begin.
 Show me the full generated Arduino code.
 ```
 
@@ -65,17 +99,18 @@ or run:
 python -m serial.tools.miniterm COM20 115200
 ```
 
-Copy the boot block from `PIN_FINGERPRINT_BEGIN` to `PIN_FINGERPRINT_END`, then
-press the button once and turn the encoder once. Copy the `BUTTON_PRESS`,
-`ENCODER_TICK`, `MOTOR_ON`, and `MOTOR_OFF` lines.
+Copy any full `PINMAP_JSON` line, then press the button once and turn the
+encoder once. Copy the `BUTTON_PRESS`, `ENCODER_TICK`, `MOTOR_HIGH`, and
+`MOTOR_LOW` lines.
 
 ## What To Report Back
 
 Report:
 
 - whether the motor vibrated in this Axiometa diagnostic firmware;
-- the full `PIN_FINGERPRINT` block;
-- the `MOTOR_ON ... pin=...` line.
+- one full `PINMAP_JSON` line;
+- the `MOTOR_HIGH ... pin=...` line;
+- the `ENCODER_TICK` line.
 
 If the motor vibrates there, the printed `MOTOR` value is the exact value that
 must be used by the PlatformIO firmware.
