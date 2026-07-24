@@ -37,9 +37,10 @@ constexpr uint8_t OUTPUT_PIN_COUNT = sizeof(outputPins) / sizeof(outputPins[0]);
 int lastValues[INPUT_PIN_COUNT];
 uint32_t seq = 1;
 uint32_t lastReadMs = 0;
-uint32_t phaseStartedMs = 0;
-uint8_t outputIndex = 0;
+uint32_t pulseUntilMs = 0;
+int8_t pulsedOutputIndex = -1;
 bool outputActive = false;
+String incomingLine;
 
 void sendEnvelope(const char* type, const String& payload) {
   Serial.print("{\"v_major\":1,\"v_minor\":0,\"seq\":");
@@ -74,7 +75,7 @@ void sendInputSnapshot(const char* reason) {
 
 void readInputs() {
   const uint32_t now = millis();
-  if ((now - lastReadMs) < 20 || outputActive) {
+  if ((now - lastReadMs) < 20) {
     return;
   }
   lastReadMs = now;
@@ -93,43 +94,127 @@ void readInputs() {
   }
 }
 
-void sendOutputEvent(const PinDef& pin, bool active) {
+void sendOutputEvent(const PinDef& pin, bool active, bool levelHigh) {
   String payload = "{\"label\":\"";
   payload += pin.label;
   payload += "\",\"gpio\":";
   payload += pin.pin;
+  payload += ",\"level\":\"";
+  payload += levelHigh ? "HIGH" : "LOW";
+  payload += "\"";
   payload += ",\"active\":";
   payload += active ? "true" : "false";
   payload += "}";
   sendEnvelope("PIN_PROBE_OUTPUT", payload);
 }
 
-void updateOutputScan() {
-  const uint32_t now = millis();
+int8_t findOutputPin(const String& line) {
+  for (uint8_t i = 0; i < OUTPUT_PIN_COUNT; ++i) {
+    if (line.indexOf(String("\"label\":\"") + outputPins[i].label + "\"") >= 0) {
+      return i;
+    }
+  }
+  return -1;
+}
 
-  if (phaseStartedMs == 0) {
-    phaseStartedMs = now;
+uint32_t parseDurationMs(const String& line) {
+  const String key = "\"duration_ms\":";
+  const int keyIndex = line.indexOf(key);
+  if (keyIndex < 0) {
+    return 1000;
   }
 
-  if (!outputActive && (now - phaseStartedMs) >= 700) {
-    allPinsInputPullup();
-    const PinDef& pin = outputPins[outputIndex];
-    pinMode(pin.pin, OUTPUT);
-    digitalWrite(pin.pin, HIGH);
-    outputActive = true;
-    phaseStartedMs = now;
-    sendOutputEvent(pin, true);
+  const int valueStart = keyIndex + key.length();
+  const uint32_t parsed = line.substring(valueStart).toInt();
+  if (parsed < 50) {
+    return 50;
+  }
+  if (parsed > 5000) {
+    return 5000;
+  }
+  return parsed;
+}
+
+bool parseLevelHigh(const String& line) {
+  if (line.indexOf("\"level\":\"LOW\"") >= 0) {
+    return false;
+  }
+  return true;
+}
+
+void stopPulse() {
+  if (pulsedOutputIndex < 0) {
     return;
   }
 
-  if (outputActive && (now - phaseStartedMs) >= 220) {
-    const PinDef& pin = outputPins[outputIndex];
-    digitalWrite(pin.pin, LOW);
-    pinMode(pin.pin, INPUT_PULLUP);
-    outputActive = false;
-    phaseStartedMs = now;
-    sendOutputEvent(pin, false);
-    outputIndex = (outputIndex + 1) % OUTPUT_PIN_COUNT;
+  const PinDef& pin = outputPins[pulsedOutputIndex];
+  digitalWrite(pin.pin, LOW);
+  pinMode(pin.pin, INPUT_PULLUP);
+  outputActive = false;
+  pulseUntilMs = 0;
+  sendOutputEvent(pin, false, true);
+  pulsedOutputIndex = -1;
+}
+
+void startPulse(int8_t index, bool levelHigh, uint32_t durationMs) {
+  stopPulse();
+
+  const PinDef& pin = outputPins[index];
+  pinMode(pin.pin, OUTPUT);
+  digitalWrite(pin.pin, levelHigh ? HIGH : LOW);
+  outputActive = true;
+  pulsedOutputIndex = index;
+  pulseUntilMs = millis() + durationMs;
+  sendOutputEvent(pin, true, levelHigh);
+}
+
+void handleCommand(const String& line) {
+  if (line.indexOf("\"type\":\"PIN_PROBE_PULSE\"") >= 0) {
+    const int8_t index = findOutputPin(line);
+    if (index < 0) {
+      sendEnvelope("PIN_PROBE_ERROR", "{\"error\":\"unknown_label\"}");
+      return;
+    }
+
+    startPulse(index, parseLevelHigh(line), parseDurationMs(line));
+    return;
+  }
+
+  if (line.indexOf("\"type\":\"PIN_PROBE_SNAPSHOT\"") >= 0) {
+    sendInputSnapshot("requested");
+    return;
+  }
+
+  if (line.indexOf("\"type\":\"PIN_PROBE_STOP\"") >= 0) {
+    stopPulse();
+    return;
+  }
+}
+
+void pollSerial() {
+  while (Serial.available() > 0) {
+    const char c = static_cast<char>(Serial.read());
+    if (c == '\r') {
+      continue;
+    }
+    if (c == '\n') {
+      if (incomingLine.length() > 0) {
+        handleCommand(incomingLine);
+        incomingLine = "";
+      }
+      continue;
+    }
+    if (incomingLine.length() < 512) {
+      incomingLine += c;
+    } else {
+      incomingLine = "";
+    }
+  }
+}
+
+void updatePulse() {
+  if (outputActive && millis() >= pulseUntilMs) {
+    stopPulse();
   }
 }
 
@@ -146,14 +231,15 @@ void setup() {
 
   sendEnvelope(
     "PIN_PROBE_HELLO",
-    "{\"board\":\"genesis-mini-v1-rev2\",\"notes\":\"do_not_press_button_during_output_scan\"}"
+    "{\"board\":\"genesis-mini-v1-rev2\",\"notes\":\"command_driven_probe\"}"
   );
   sendInputSnapshot("boot");
 }
 
 void loop() {
+  pollSerial();
   readInputs();
-  updateOutputScan();
+  updatePulse();
   delay(1);
 }
 

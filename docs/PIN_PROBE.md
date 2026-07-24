@@ -5,7 +5,7 @@ Use this when a module does not react on the assumed GPIO assignment.
 The pin-probe firmware does two things:
 
 - reports all slot 1/2/3 input pin changes over serial;
-- briefly drives each slot 2 and slot 3 local IO pin high, one at a time.
+- pulses a requested slot 2 or slot 3 local IO pin on command.
 
 This identifies:
 
@@ -21,23 +21,48 @@ Reconnect the Genesis Mini to the PC so it appears as `COM20`, then run:
 ```powershell
 cd genesis\abyssal_line_controller
 python -m platformio run -e genesis_mini_pin_probe -t upload
-cd ..\..
-python tools\serial_spike_host.py --port COM20 --listen-only --duration 30
 ```
 
-Do not press the LED button while the output scan is running. The scan drives
-candidate output pins briefly; pressing a button tied to ground during that
-short pulse could stress the pin.
+Do not press the LED button while a slot 2 output pulse is active. A button tied
+to ground could stress the pin if that same line is being driven high.
 
 ## What To Observe
 
-While the probe runs:
+### Output Pins
 
-- note which `PIN_PROBE_OUTPUT` line is printed when the LED turns on;
-- note which `PIN_PROBE_OUTPUT` line is printed when the motor vibrates;
+Run one pulse at a time from the repo root:
+
+```powershell
+python tools\pin_probe_tool.py --port COM20 --pulse slot2_io0 --level HIGH --ms 2000 --duration 3
+python tools\pin_probe_tool.py --port COM20 --pulse slot2_io0 --level LOW  --ms 2000 --duration 3
+python tools\pin_probe_tool.py --port COM20 --pulse slot2_io1 --level HIGH --ms 2000 --duration 3
+python tools\pin_probe_tool.py --port COM20 --pulse slot2_io1 --level LOW  --ms 2000 --duration 3
+python tools\pin_probe_tool.py --port COM20 --pulse slot2_io2 --level HIGH --ms 2000 --duration 3
+python tools\pin_probe_tool.py --port COM20 --pulse slot2_io2 --level LOW  --ms 2000 --duration 3
+
+python tools\pin_probe_tool.py --port COM20 --pulse slot3_io0 --level HIGH --ms 2000 --duration 3
+python tools\pin_probe_tool.py --port COM20 --pulse slot3_io1 --level HIGH --ms 2000 --duration 3
+python tools\pin_probe_tool.py --port COM20 --pulse slot3_io2 --level HIGH --ms 2000 --duration 3
+```
+
+For each command:
+
+- note whether the LED changes;
+- note whether the motor vibrates;
+- keep the printed `PIN_PROBE_OUTPUT` line.
+
+### Input Pins
+
+Run:
+
+```powershell
+python tools\pin_probe_tool.py --port COM20 --snapshot --duration 20
+```
+
+Then:
+
 - rotate the encoder and note which `slot1_*` values change;
-- when the output scan is stopped, press the button and note which `slot2_*`
-  value changes.
+- press the button and note which `slot2_*` value changes.
 
 The expected useful lines look like:
 
