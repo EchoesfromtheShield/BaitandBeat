@@ -141,8 +141,8 @@ function Music.capture_layer(event, drone)
   local texture = clamp(avg_tension * 0.65 + max_tension * 0.35, 0, 1)
   local rate = 0.12 + density * 0.85
   local pan = ({ -0.48, 0.42, 0.0 })[slot] or 0
-  local amp = 0.08 + math.min(slot, 3) * 0.012
-  amp = amp * 1.9
+  local amp = 0.11 + math.min(slot, 3) * 0.018
+  amp = amp * 3.2
 
   engine.capture_layer(slot, drone.root_hz, rate, texture, pan, amp)
 end
@@ -159,13 +159,13 @@ function Music.tick(game, events)
     drone_send_t = 0
     local amp = 0.0
     if game.state == "EXPLORE" then
-      amp = 0.48 + drone.pressure_0_1 * 0.12
+      amp = 1.00 + drone.pressure_0_1 * 0.22
     elseif game.state == "RESONANCE" then
-      amp = 0.56 + drone.pressure_0_1 * 0.12 + drone.signal_0_1 * 0.08
+      amp = 1.12 + drone.pressure_0_1 * 0.20 + drone.signal_0_1 * 0.18
     elseif game.state == "STRUGGLE" then
-      amp = 0.46 + drone.pressure_0_1 * 0.08
+      amp = 0.88 + drone.pressure_0_1 * 0.12
     elseif game.state == "SURFACE" then
-      amp = 0.42
+      amp = 0.74
     end
     engine.drone(
       drone.root_hz,
@@ -180,19 +180,28 @@ function Music.tick(game, events)
 
   if game.state == "STRUGGLE" and has_engine_command("strike") then
     local safe = safe_tension_weight(game)
-    local interval = 0.34 - safe * 0.13
+    local interval = 0.24 - safe * 0.10
     local pan = ((game.fish_x or 0.5) - 0.5) * 1.4
     struggle_pulse_t = struggle_pulse_t + game.config.TICK_S
 
-    if safe > 0.08 and struggle_pulse_t >= interval then
+    if struggle_pulse_t >= interval then
       struggle_pulse_t = struggle_pulse_t - interval
       engine.strike(
         3,
         pulse_note_hz(game),
-        clamp((game.signal or 0.5) * 0.55 + safe * 0.45, 0, 1),
+        clamp(0.35 + (game.signal or 0.5) * 0.30 + safe * 0.55, 0, 1),
         clamp(game.tension or 0, 0, 1),
         clamp(pan, -1, 1)
       )
+      if safe > 0.6 and pulse_step % 2 == 0 then
+        engine.strike(
+          0,
+          scale_hz(game, 5 + (pulse_step % 3), 1),
+          safe,
+          clamp(game.tension or 0, 0, 1),
+          clamp(-pan * 0.7, -1, 1)
+        )
+      end
     end
   else
     struggle_pulse_t = 0
