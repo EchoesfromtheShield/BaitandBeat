@@ -408,13 +408,13 @@ function Music.tick(game, events)
     drone_send_t = 0
     local amp = 0.0
     if game.state == "EXPLORE" then
-      amp = 1.00 + drone.pressure_0_1 * 0.22
+      amp = 0.42 + drone.pressure_0_1 * 0.06
     elseif game.state == "RESONANCE" then
-      amp = 1.12 + drone.pressure_0_1 * 0.20 + drone.signal_0_1 * 0.18
+      amp = 0.48 + drone.pressure_0_1 * 0.06 + drone.signal_0_1 * 0.08
     elseif game.state == "STRUGGLE" then
-      amp = 0.88 + drone.pressure_0_1 * 0.12
+      amp = 0.36 + drone.pressure_0_1 * 0.05
     elseif game.state == "SURFACE" then
-      amp = 0.74
+      amp = 0.30
     end
     engine.drone(
       drone.root_hz,

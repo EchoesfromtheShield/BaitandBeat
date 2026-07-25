@@ -31,7 +31,6 @@ Engine_AbyssalLine : CroneEngine {
 			var fishVoice;
 			var fishCutoff;
 			var fishRq;
-			var water;
 			var tide;
 			var sig;
 
@@ -40,28 +39,28 @@ Engine_AbyssalLine : CroneEngine {
 			padTone = SinOsc.ar(
 				rootLag * [0.5, 1, 1.5, 2, 3, 4] * (1 + drift),
 				0,
-				[0.24, 0.36, 0.31, 0.18, 0.10, 0.065]
+				[0.15, 0.24, 0.18, 0.08, 0.035, 0.018]
 			);
 			softEdges = LFTri.ar(
 				rootLag * [0.5, 1, 1.5, 2] * (1 + edgeDrift),
 				0,
-				[0.12, 0.16, 0.13, 0.07]
+				[0.045, 0.060, 0.045, 0.025]
 			);
 			shimmer = SinOsc.ar(
 				rootLag * [3, 4, 4.5, 6] * (1 + LFNoise1.kr([0.027, 0.034, 0.041, 0.052]).range(-0.0015, 0.0015)),
 				0,
-				[0.045, 0.035, 0.028, 0.018] * brightLag
+				[0.018, 0.014, 0.010, 0.006] * brightLag * (1 - (depthLag * 0.45))
 			);
 
 			pad = Splay.ar(padTone, 0.44 + (depthLag * 0.18), 0.95);
 			pad = pad + Splay.ar(softEdges, 0.28, 0.36);
 			pad = pad + Splay.ar(shimmer, 0.74, 0.42);
-			sub = SinOsc.ar(rootLag * 0.5, 0, 0.14 + pressureLag * 0.08);
-			padCutoff = (depthLag.linexp(0, 1, 5200, 760) * (0.78 + brightLag * 0.34 + fishLag * 0.28)).clip(620, 6200);
-			padRq = (0.64 - fishLag * 0.10).clip(0.48, 0.72);
+			sub = SinOsc.ar(rootLag * 0.5, 0, 0.08 + pressureLag * 0.05);
+			padCutoff = (depthLag.linexp(0, 1, 4200, 620) * (0.88 + brightLag * 0.22 + fishLag * 0.22)).clip(520, 4800);
+			padRq = (0.76 - fishLag * 0.08).clip(0.62, 0.82);
 			pad = RLPF.ar(pad + (sub ! 2), padCutoff, padRq);
-			pad = LPF.ar(pad, padCutoff * 1.24);
-			pad = (pad * (1.03 + pressureLag * 0.12)).tanh;
+			pad = LPF.ar(pad, padCutoff * 1.15);
+			pad = pad * (0.92 + pressureLag * 0.08);
 
 			fishCutoff = (rootLag * fishLag.linexp(0, 1, 5, 70)).clip(240, 9000);
 			fishRq = fishLag.linlin(0, 1, 0.50, 0.04).clip(0.04, 0.50);
@@ -72,15 +71,14 @@ Engine_AbyssalLine : CroneEngine {
 			);
 			fishVoice = RLPF.ar(Splay.ar(fishVoice, 0.34), fishCutoff, fishRq);
 
-			water = LPF.ar(PinkNoise.ar(0.00035 + pressureLag * 0.0009), 430 + depthLag * 330);
-			tide = SinOsc.kr(0.018 + depthLag * 0.045, [0, pi]).range(0.84, 1);
+			tide = SinOsc.kr(0.014 + depthLag * 0.034, [0, pi]).range(0.88, 1);
 
-			sig = (pad * (1.30 + signalLag * 0.10)) + (fishVoice * 1.18) + (water ! 2);
+			sig = (pad * (1.00 + signalLag * 0.08)) + (fishVoice * 1.05);
 			sig = LeakDC.ar(sig);
-			sig = FreeVerb2.ar(sig[0], sig[1], 0.30 + depthLag * 0.09, 0.82, 0.42);
-			deepDamp = depthLag.linexp(0, 1, 7600, 1500).clip(1200, 7600);
+			sig = FreeVerb2.ar(sig[0], sig[1], 0.26 + depthLag * 0.08, 0.88, 0.72);
+			deepDamp = depthLag.linexp(0, 1, 6200, 1200).clip(950, 6200);
 			sig = LPF.ar(sig, deepDamp * (1 + fishLag * 0.35));
-			sig = Limiter.ar(sig * ampLag * tide * 2.25, 0.95, 0.01);
+			sig = Limiter.ar(sig * ampLag * tide * 1.18, 0.95, 0.01);
 			Out.ar(out, sig);
 		}).add;
 
@@ -180,7 +178,7 @@ Engine_AbyssalLine : CroneEngine {
 		drone = Synth(\AbyssalDrone, [\amp, 0]);
 
 		this.addCommand(\start, "", {
-			drone.set(\amp, 0.85);
+			drone.set(\amp, 0);
 		});
 
 		this.addCommand(\stop, "", {
