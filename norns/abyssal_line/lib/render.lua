@@ -130,14 +130,24 @@ end
 
 local function draw_loop_slots(captured_by_type)
   local slots = {
-    { type = "square", x = 9 },
-    { type = "circle", x = 20 },
-    { type = "triangle", x = 31 },
+    { type = "square", x = 9, max = 1 },
+    { type = "circle", x = 20, max = 2 },
+    { type = "triangle", x = 42, max = 2 },
   }
 
   for _, slot in ipairs(slots) do
-    local active = captured_by_type and captured_by_type[slot.type]
-    draw_fish_shape(slot.type, slot.x, 45, active and 12 or 3, active and 0.9 or 0.0, false)
+    local layers = captured_by_type and captured_by_type[slot.type] or {}
+    for index = 1, slot.max do
+      local active = layers[index] ~= nil
+      draw_fish_shape(
+        slot.type,
+        slot.x + ((index - 1) * 9),
+        45,
+        active and 12 or 3,
+        active and 0.9 or 0.0,
+        false
+      )
+    end
   end
 end
 

@@ -7,6 +7,12 @@ local FISH_TYPES = {
   { type = "triangle", slot = 3 },
 }
 
+local CAPTURE_LIMITS = {
+  square = 1,
+  circle = 2,
+  triangle = 2,
+}
+
 local PULL_PATTERN = {
   { name = "rest", duration = 0.90, pull = 0.00 },
   { name = "small_tug", duration = 0.18, pull = 0.42 },
@@ -135,8 +141,8 @@ end
 function Game:_rebuild_captured_layers()
   self.captured_layers = {}
   for _, fish_type in ipairs(FISH_TYPES) do
-    local layer = self.captured_by_type[fish_type.type]
-    if layer then
+    local layers = self.captured_by_type[fish_type.type] or {}
+    for _, layer in ipairs(layers) do
       table.insert(self.captured_layers, layer)
     end
   end
@@ -225,14 +231,19 @@ function Game:press()
 
   if self.state == "RESONANCE" and self.bite_ready and self.active_fish then
     local fish = self.active_fish
+    local layers = self.captured_by_type[fish.type] or {}
+    local limit = CAPTURE_LIMITS[fish.type] or 1
 
-    if self.captured_by_type[fish.type] then
-      self.captured_by_type[fish.type] = nil
+    if #layers >= limit then
+      local removed = table.remove(layers, 1)
+      self.captured_by_type[fish.type] = layers
       self:_rebuild_captured_layers()
       self:_queue({
         type = "loop_removed",
         fish_type = fish.type,
         slot = fish.slot,
+        loop_key = removed and removed.loop_key or nil,
+        layer = removed,
       })
     end
 
@@ -379,6 +390,8 @@ function Game:_update_struggle(dt, events)
   self.fight_time = self.fight_time + dt
 
   local item, index = pattern_at(self.fight_time)
+  local previous_x = fish.x
+  local previous_y = fish.fish_depth
   self:_update_fish_swim(fish, dt, 1.0, 1.15 + item.pull * 1.25)
   fish.depth_signal = 1.0
   fish.signal = clamp(0.55 + item.pull * 0.45, 0, 1)
@@ -414,6 +427,8 @@ function Game:_update_struggle(dt, events)
   local pull_offset = item.pull * 0.18
   local target = clamp(ascent_depth + pull_offset, 0, 1)
   fish.fish_depth = fish.fish_depth + (target - fish.fish_depth) * 0.18
+  fish.motion_x = clamp(math.abs(fish.x - previous_x) / math.max(dt * 0.42, 0.0001), 0, 1)
+  fish.motion_y = clamp(math.abs(fish.fish_depth - previous_y) / math.max(dt * 0.18, 0.0001), 0, 1)
   self.fish_depth = fish.fish_depth
   self.tension = clamp(math.abs(fish.fish_depth - self.line_depth) * 2.6, 0, 1)
   self.fight_tension_sum = self.fight_tension_sum + self.tension
@@ -454,6 +469,7 @@ function Game:_update_struggle(dt, events)
     local layer = {
       type = fish.type,
       slot = fish.slot,
+      loop_key = string.format("%s:%d", fish.type, fish.id),
       pattern_seed = fish.pattern_seed,
       timbre_seed = fish.timbre_seed,
       event_count = #self.captured_events,
@@ -462,7 +478,9 @@ function Game:_update_struggle(dt, events)
       max_tension = self.fight_max_tension,
     }
 
-    self.captured_by_type[fish.type] = layer
+    local layers = self.captured_by_type[fish.type] or {}
+    table.insert(layers, layer)
+    self.captured_by_type[fish.type] = layers
     self:_rebuild_captured_layers()
     self.state = "SURFACE"
     self.hooked_fish = nil

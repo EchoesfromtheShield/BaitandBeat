@@ -96,10 +96,23 @@ When a fish approaches the hook in `RESONANCE`, it previews its role:
 - triangle: one slow-attack harmonic note.
 
 When the player presses on bite-ready and enters `STRUGGLE`, the fish generates
-its quantized pattern from the Norns clock. If a loop of the same type is
-already captured, it is removed immediately at the hook moment. If the new fish
-escapes or the line breaks, the old loop remains lost. A successful capture
-stores the new loop for that fish type.
+its quantized pattern from the Norns clock. Captured loop limits are:
+
+- square: one percussive loop;
+- circle: two arpeggiator loops;
+- triangle: two harmony-arc loops.
+
+If a type is already full, hooking a new fish of that type removes the oldest
+loop immediately. If the new fish escapes or the line breaks, the removed loop
+remains lost.
+
+During `STRUGGLE`, the attached fish movement also modulates its sound:
+
+- square: horizontal movement increases reverb, vertical movement increases
+  bitcrush/sample degradation;
+- circle: horizontal movement lengthens sustain, vertical movement opens the
+  arpeggiator filter;
+- triangle: both axes move the harmonic-arc filter.
 
 ## Explicit Non-Goals
 

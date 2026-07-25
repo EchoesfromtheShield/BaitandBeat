@@ -115,12 +115,16 @@ Engine_AbyssalLine : CroneEngine {
 		}).add;
 
 		SynthDef(\AbyssalFishEvent, {
-			arg out = 0, mode = 0, note = 110, timbre = 0.5, amp = 0.7, pan = 0;
+			arg out = 0, mode = 0, note = 110, timbre = 0.5, amp = 0.7, pan = 0,
+				motion_x = 0, motion_y = 0;
 
 			var safeMode = mode.clip(0, 4);
 			var freq = note.clip(28, 5200);
 			var timbreLag = timbre.clip(0, 1);
-			var lifeRel = Select.kr(safeMode, [0.45, 0.34, 0.18, 0.52, 3.1]);
+			var motionX = motion_x.clip(0, 1);
+			var motionY = motion_y.clip(0, 1);
+			var isDrum = Select.kr(safeMode, [1, 1, 1, 0, 0]);
+			var lifeRel = Select.kr(safeMode, [0.45, 0.34, 0.18, 0.32 + motionX * 0.72, 3.1]);
 			var life = Line.kr(1, 0, lifeRel, doneAction: 2);
 			var kickEnv = Env.perc(0.001, 0.30, 1, -6).kr;
 			var kickPitch = Env.perc(0.001, 0.075, 58 + timbreLag * 44, -7).kr;
@@ -131,26 +135,39 @@ Engine_AbyssalLine : CroneEngine {
 			var snare = BPF.ar(WhiteNoise.ar(snareEnv * 1.0), 1700 + timbreLag * 2400, 0.45) + snareTone;
 			var rimEnv = Env.perc(0.001, 0.075, 1, -8).kr;
 			var rim = Ringz.ar(WhiteNoise.ar(rimEnv * 0.42), freq * (2.8 + timbreLag * 2.6), 0.045 + timbreLag * 0.045);
-			var arpEnv = Env.perc(0.003, 0.24 + timbreLag * 0.16, 1, -4).kr;
+			var arpEnv = Env.perc(0.003, 0.16 + timbreLag * 0.12 + motionX * 0.50, 1, -4).kr;
+			var arpCutoff = (freq * (4.0 + timbreLag * 10.0 + motionY * 22.0)).clip(620, 14000);
 			var interval = Select.kr((timbreLag * 3.999).floor, [1.189207, 1.33484, 1.498307, 1.781797]);
 			var arcEnv = Env.linen(0.42 + timbreLag * 0.35, 1.25, 0.90, 1, -3).kr;
+			var arcCutoff = (freq * (1.8 + timbreLag * 4.0 + motionX * 4.5 + motionY * 6.0)).clip(360, 9000);
+			var crushRate = motionY.linexp(0, 1, 18000, 3800);
+			var crushMix = motionY * isDrum;
+			var verbMix = motionX * isDrum;
 			var arp;
 			var arc;
 			var sig;
+			var crushed;
+			var stereo;
+			var drumVerb;
 
 			arp = Pulse.ar(freq * [0.997, 1.003], 0.42 + timbreLag * 0.18, arpEnv * 0.36).sum;
-			arp = RLPF.ar(arp, (freq * (5 + timbreLag * 16)).clip(800, 14000), 0.10 + timbreLag * 0.12);
+			arp = RLPF.ar(arp, arpCutoff, 0.16 - motionY * 0.08 + timbreLag * 0.08);
 			arc = (
 				LFTri.ar(freq, 0, 0.34) +
 				LFTri.ar(freq * interval, 0, 0.24) +
 				Saw.ar(freq * 0.5, 0.10)
 			) * arcEnv;
-			arc = RLPF.ar(arc, (freq * (2.2 + timbreLag * 7)).clip(450, 9000), 0.18);
+			arc = RLPF.ar(arc, arcCutoff, 0.28 - motionY * 0.12);
 			sig = Select.ar(safeMode, [kick, snare, rim, arp, arc]);
+			crushed = Latch.ar(sig, Impulse.ar(crushRate));
+			sig = (sig * (1 - crushMix)) + (crushed * crushMix);
 
 			sig = LeakDC.ar(sig);
 			sig = Limiter.ar(sig * amp.clip(0, 2.4) * life * 1.6, 0.95, 0.004);
-			Out.ar(out, Pan2.ar(sig, pan.clip(-1, 1)));
+			stereo = Pan2.ar(sig, pan.clip(-1, 1));
+			drumVerb = FreeVerb2.ar(stereo[0], stereo[1], 0.08 + motionX * 0.48, 0.76, 0.32);
+			stereo = (stereo * (1 - (verbMix * 0.42))) + (drumVerb * verbMix * 0.62);
+			Out.ar(out, stereo);
 		}).add;
 
 		SynthDef(\AbyssalLayer, {
@@ -207,13 +224,15 @@ Engine_AbyssalLine : CroneEngine {
 			]);
 		});
 
-		this.addCommand(\fish_event, "iffff", { arg msg;
+		this.addCommand(\fish_event, "ifffffff", { arg msg;
 			Synth(\AbyssalFishEvent, [
 				\mode, msg[1].asInteger,
 				\note, msg[2].asFloat,
 				\timbre, msg[3].asFloat,
 				\amp, msg[4].asFloat,
-				\pan, msg[5].asFloat
+				\pan, msg[5].asFloat,
+				\motion_x, msg[6].asFloat,
+				\motion_y, msg[7].asFloat
 			]);
 		});
 

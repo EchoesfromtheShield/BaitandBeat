@@ -29,7 +29,7 @@ Required:
 - resonance near three hidden fish, one per musical role;
 - bite after stillness in the bite zone;
 - tension, slack, overload, capture progress;
-- up to three captured persistent loops, one per fish type.
+- up to five captured persistent loops: one square, two circles, two triangles.
 
 Exit gate: the loop is playable with only Norns controls.
 
@@ -56,6 +56,7 @@ Required:
 
 - drone depth mapping is expressive enough to explore;
 - fish roles are musically distinct: percussion, arpeggio, and harmony arcs;
+- attached fish movement audibly modulates the struggle sound by type;
 - struggle patterns are clocked at 90 BPM and clearly quantized;
 - captured loops remain musically useful together;
 - no additional game systems added.

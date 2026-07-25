@@ -74,9 +74,22 @@ local function timbre(fish, salt)
   return seeded(fish and fish.timbre_seed or 1, salt)
 end
 
-local function fish_event(mode, note, timbre_value, amp, pan)
+local function movement_from_fish(fish)
+  return clamp(fish and fish.motion_x or 0, 0, 1),
+    clamp(fish and fish.motion_y or 0, 0, 1)
+end
+
+local function fish_event(mode, note, timbre_value, amp, pan, motion_x, motion_y)
   if has_engine_command("fish_event") then
-    engine.fish_event(mode, note, timbre_value, amp, pan)
+    engine.fish_event(
+      mode,
+      note,
+      timbre_value,
+      amp,
+      pan,
+      clamp(motion_x or 0, 0, 1),
+      clamp(motion_y or 0, 0, 1)
+    )
   end
 end
 
@@ -89,11 +102,11 @@ local function beat_seconds(beats)
   return (60 / bpm) * beats
 end
 
-local function delayed_fish_event(delay_beats, mode, note, timbre_value, amp, pan)
+local function delayed_fish_event(delay_beats, mode, note, timbre_value, amp, pan, motion_x, motion_y)
   if clock and clock.run and clock.sleep then
     clock.run(function()
       clock.sleep(beat_seconds(delay_beats))
-      fish_event(mode, note, timbre_value, amp, pan)
+      fish_event(mode, note, timbre_value, amp, pan, motion_x, motion_y)
     end)
   end
 end
@@ -147,7 +160,8 @@ local function square_step(fish, amp_scale)
   local note = scale_hz(current_game, 1 + degree_offset, mode == 2 and 1 or 0)
   local accent = 0.72 + density * 0.38
   local amp = (mode == 0 and 1.05 or 0.72) * accent * (amp_scale or 1)
-  fish_event(mode, note, timbre(fish, 10 + mode), amp, pan_from_fish(fish))
+  local motion_x, motion_y = movement_from_fish(fish)
+  fish_event(mode, note, timbre(fish, 10 + mode), amp, pan_from_fish(fish), motion_x, motion_y)
 
   if section == dense_section and mode == 2 and fish_step_seed(fish, 40 + bar_step) < 0.36 then
     delayed_fish_event(
@@ -156,7 +170,9 @@ local function square_step(fish, amp_scale)
       scale_hz(current_game, 3 + (bar_step % 3), 1),
       timbre(fish, 44),
       amp * 0.68,
-      pan_from_fish(fish) * -0.6
+      pan_from_fish(fish) * -0.6,
+      motion_x,
+      motion_y
     )
   end
 end
@@ -198,7 +214,8 @@ local function circle_step(fish, amp_scale)
   local note = scale_hz(current_game, degree, octave)
   local amp = 0.48 * (amp_scale or 1)
   local pan = pan_from_fish(fish)
-  fish_event(3, note, timbre(fish, 15), amp, pan)
+  local motion_x, motion_y = movement_from_fish(fish)
+  fish_event(3, note, timbre(fish, 15), amp, pan, motion_x, motion_y)
 
   if fish_step_seed(fish, 50) < 0.42 then
     local next_degree = arp_degree(fish, index + 1)
@@ -208,7 +225,9 @@ local function circle_step(fish, amp_scale)
       scale_hz(current_game, next_degree, octave),
       timbre(fish, 51),
       amp * 0.82,
-      pan * -0.45
+      pan * -0.45,
+      motion_x,
+      motion_y
     )
   end
 end
@@ -228,7 +247,16 @@ local function triangle_step(fish, amp_scale)
   local pair = choice(fish.pattern_seed, 22 + math.floor(step16 / period), intervals)
   local degree = pair[1]
   local note = scale_hz(current_game, degree, 1)
-  fish_event(4, note, timbre(fish, pair[2]), 0.72 * (amp_scale or 1), pan_from_fish(fish))
+  local motion_x, motion_y = movement_from_fish(fish)
+  fish_event(
+    4,
+    note,
+    timbre(fish, pair[2]),
+    0.72 * (amp_scale or 1),
+    pan_from_fish(fish),
+    motion_x,
+    motion_y
+  )
 end
 
 local function run_fish_step(fish, amp_scale)
@@ -247,11 +275,11 @@ end
 
 local function trigger_preview(fish)
   if fish.type == "square" then
-    fish_event(2, scale_hz(current_game, 1, 1), timbre(fish, 30), 0.88, pan_from_fish(fish))
+    fish_event(2, scale_hz(current_game, 1, 1), timbre(fish, 30), 0.88, pan_from_fish(fish), 0, 0)
   elseif fish.type == "circle" then
     preview_burst = { fish = fish, remaining = 6, index = 0 }
   elseif fish.type == "triangle" then
-    fish_event(4, scale_hz(current_game, 1, 1), timbre(fish, 31), 0.84, pan_from_fish(fish))
+    fish_event(4, scale_hz(current_game, 1, 1), timbre(fish, 31), 0.84, pan_from_fish(fish), 0, 0)
   end
 end
 
@@ -280,8 +308,8 @@ local function update_preview_burst()
   local fish = preview_burst.fish
   local degree = arp_degree(fish, preview_burst.index)
   local pan = pan_from_fish(fish)
-  fish_event(3, scale_hz(current_game, degree, 1), timbre(fish, 32), 0.50, pan)
-  delayed_fish_event(1 / 8, 3, scale_hz(current_game, arp_degree(fish, preview_burst.index + 1), 1), timbre(fish, 33), 0.36, pan * -0.4)
+  fish_event(3, scale_hz(current_game, degree, 1), timbre(fish, 32), 0.50, pan, 0, 0)
+  delayed_fish_event(1 / 8, 3, scale_hz(current_game, arp_degree(fish, preview_burst.index + 1), 1), timbre(fish, 33), 0.36, pan * -0.4, 0, 0)
   preview_burst.index = preview_burst.index + 1
   preview_burst.remaining = preview_burst.remaining - 1
 
@@ -370,8 +398,20 @@ function Music.cleanup()
   end
 end
 
-function Music.remove_loop(fish_type)
-  loop_state[fish_type] = nil
+function Music.remove_loop_event(event)
+  if event.loop_key then
+    loop_state[event.loop_key] = nil
+    return
+  end
+
+  if event.fish_type then
+    for key, layer in pairs(loop_state) do
+      if layer.type == event.fish_type then
+        loop_state[key] = nil
+        return
+      end
+    end
+  end
 end
 
 function Music.capture_loop(event)
@@ -383,11 +423,16 @@ function Music.capture_loop(event)
     return
   end
 
-  loop_state[fish_type] = {
+  local loop_key = layer.loop_key or string.format("%s:%s", fish_type, tostring(layer.pattern_seed or fish.pattern_seed or 1))
+
+  loop_state[loop_key] = {
     id = layer.pattern_seed or fish.pattern_seed or 1,
+    loop_key = loop_key,
     type = fish_type,
     slot = layer.slot or fish.slot or 1,
     x = fish.x or 0.5,
+    motion_x = 0.08,
+    motion_y = 0.06,
     pattern_seed = layer.pattern_seed or fish.pattern_seed or 1,
     timbre_seed = layer.timbre_seed or fish.timbre_seed or 1,
     loop_amp = clamp((layer.avg_tension or 0.4) * 0.35 + (layer.max_tension or 0.5) * 0.25, 0, 0.55),
@@ -429,7 +474,7 @@ function Music.tick(game, events)
 
   for _, event in ipairs(events) do
     if event.type == "loop_removed" then
-      Music.remove_loop(event.fish_type)
+      Music.remove_loop_event(event)
     elseif event.type == "surface" and event.name == "captured" then
       Music.capture_loop(event)
     end

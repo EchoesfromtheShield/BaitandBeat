@@ -17,7 +17,7 @@ Implement only the communication spike and a minimal vertical slice:
 - `EXPLORE`: Genesis encoder moves the line down, up, or leaves it still.
 - `RESONANCE`: one of three hidden fish contaminates the drone near its depth.
 - `STRUGGLE`: the hooked fish role drives a quantized musical pattern.
-- `SURFACE`: the captured fish becomes the persistent loop for its role.
+- `SURFACE`: the captured fish becomes a persistent loop for its role.
 
 No species system, inventory, resources, economy, complex menus, persistence,
 mutation tree, or multi-page Genesis UI.
@@ -82,9 +82,14 @@ three seeded fish at different depths:
 - circle: bright square-wave arpeggiator;
 - triangle: slow harmony arcs.
 
-Only one loop per fish type persists. Hooking a new fish of a type that is
-already looping removes the old loop immediately; if the new fight is lost, the
-old loop is still gone.
+Captured loop limits are intentionally small:
+
+- square: one percussive loop;
+- circle: two arpeggiator loops;
+- triangle: two harmony-arc loops.
+
+Hooking a new fish of a full type removes that type's oldest loop immediately;
+if the new fight is lost, the removed loop is still gone.
 
 ## Genesis M0 Hardware Spike
 
