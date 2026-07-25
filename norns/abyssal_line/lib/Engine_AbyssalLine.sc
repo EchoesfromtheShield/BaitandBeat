@@ -30,19 +30,20 @@ Engine_AbyssalLine : CroneEngine {
 			var tide;
 			var sig;
 
-			unison = depthLag.linlin(0, 1, 0.006, 0.09);
+			unison = depthLag.linlin(0, 1, 0.004, 0.045);
 			supersaw = Saw.ar(
-				rootLag * [0.5, 0.5, 1, 1, 1.189207, 1.189207, 1.498307, 1.498307, 1.781797, 1.781797, 2, 2] *
-					(1 + ([-3.1, 2.7, -2.4, 2.1, -1.7, 1.4, -1.1, 0.9, -0.65, 0.55, -0.35, 0.31] * unison)),
-				[0.24, 0.24, 0.46, 0.46, 0.32, 0.32, 0.38, 0.38, 0.18, 0.18, 0.14, 0.14]
+				rootLag * [0.5, 0.5, 1, 1, 1.189207, 1.189207, 1.498307, 1.498307, 2, 2] *
+					(1 + ([-2.1, 1.8, -1.4, 1.2, -0.9, 0.78, -0.55, 0.48, -0.24, 0.21] * unison)),
+				[0.30, 0.30, 0.42, 0.42, 0.24, 0.24, 0.18, 0.18, 0.08, 0.08]
 			);
 
-			supersaw = Splay.ar(supersaw, 0.46 + (depthLag * 0.52), 1.35);
-			sub = SinOsc.ar(rootLag * 0.5, 0, 0.22 + pressureLag * 0.10);
-			padCutoff = (brightLag.linexp(0, 1, 1600, 14000) * (1 + depthLag * 0.62)).clip(500, 14000);
-			padRq = (0.22 - signalLag * 0.04).clip(0.08, 0.25);
+			supersaw = Splay.ar(supersaw, 0.34 + (depthLag * 0.34), 1.05);
+			sub = SinOsc.ar(rootLag * 0.5, 0, 0.18 + pressureLag * 0.08);
+			padCutoff = (brightLag.linexp(0, 1, 620, 5600) * (1 + depthLag * 0.22)).clip(420, 6200);
+			padRq = (0.42 - signalLag * 0.08).clip(0.24, 0.48);
 			supersaw = RLPF.ar(supersaw + (sub ! 2), padCutoff, padRq);
-			supersaw = (supersaw * (2.0 + depthLag * 0.8)).tanh;
+			supersaw = LPF.ar(supersaw, padCutoff * 1.08);
+			supersaw = (supersaw * (1.12 + depthLag * 0.22)).tanh;
 
 			fishCutoff = (rootLag * fishLag.linexp(0, 1, 5, 70)).clip(240, 9000);
 			fishRq = fishLag.linlin(0, 1, 0.50, 0.04).clip(0.04, 0.50);
@@ -53,13 +54,13 @@ Engine_AbyssalLine : CroneEngine {
 			);
 			fishVoice = RLPF.ar(Splay.ar(fishVoice, 0.34), fishCutoff, fishRq);
 
-			water = LPF.ar(PinkNoise.ar(0.001 + pressureLag * 0.003), 900 + depthLag * 700);
-			tide = SinOsc.kr(0.025 + depthLag * 0.09, [0, pi]).range(0.72, 1);
+			water = LPF.ar(PinkNoise.ar(0.0005 + pressureLag * 0.0012), 520 + depthLag * 420);
+			tide = SinOsc.kr(0.018 + depthLag * 0.045, [0, pi]).range(0.84, 1);
 
-			sig = (supersaw * (1.45 + signalLag * 0.22)) + (fishVoice * 1.35) + (water ! 2);
+			sig = (supersaw * (1.22 + signalLag * 0.12)) + (fishVoice * 1.18) + (water ! 2);
 			sig = LeakDC.ar(sig);
-			sig = FreeVerb2.ar(sig[0], sig[1], 0.10 + depthLag * 0.07, 0.46, 0.18);
-			sig = Limiter.ar(sig * ampLag * tide * 2.7, 0.95, 0.01);
+			sig = FreeVerb2.ar(sig[0], sig[1], 0.17 + depthLag * 0.07, 0.64, 0.22);
+			sig = Limiter.ar(sig * ampLag * tide * 2.35, 0.95, 0.01);
 			Out.ar(out, sig);
 		}).add;
 

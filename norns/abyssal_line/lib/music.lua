@@ -84,6 +84,20 @@ local function fish_step_seed(fish, salt)
   return seeded((fish and fish.pattern_seed or 1) + step16 * 17, salt)
 end
 
+local function beat_seconds(beats)
+  local bpm = current_game and current_game.config and current_game.config.BPM or 90
+  return (60 / bpm) * beats
+end
+
+local function delayed_fish_event(delay_beats, mode, note, timbre_value, amp, pan)
+  if clock and clock.run and clock.sleep then
+    clock.run(function()
+      clock.sleep(beat_seconds(delay_beats))
+      fish_event(mode, note, timbre_value, amp, pan)
+    end)
+  end
+end
+
 local function set_clock_bpm(bpm)
   if params and params.set then
     pcall(function()
@@ -97,26 +111,54 @@ local function set_clock_bpm(bpm)
 end
 
 local function square_step(fish, amp_scale)
-  local subdivision = choice(fish.pattern_seed, 1, { 4, 2, 2, 1 })
-  if step16 % subdivision ~= 0 then
-    return
+  local phrase_step = step16 % 64
+  local bar_step = step16 % 16
+  local section = math.floor(phrase_step / 16)
+  local dense_section = math.floor(seeded(fish.pattern_seed, 3) * 4)
+  local sparse_section = (dense_section + 2 + math.floor(seeded(fish.pattern_seed, 4) * 2)) % 4
+  local density = 0.46
+
+  if section == dense_section then
+    density = 0.88
+  elseif section == sparse_section then
+    density = 0.18
   end
 
-  local local_step = math.floor(step16 / subdivision)
-  local mode = 2
-  if step16 % 16 == 0 then
+  local mode = nil
+  if bar_step == 0 and seeded(fish.pattern_seed + math.floor(step16 / 16), 5) > density * 0.18 then
     mode = 0
-  elseif step16 % 16 == 8 then
+  elseif bar_step == 8 and seeded(fish.pattern_seed + math.floor(step16 / 16), 6) > density * 0.08 then
     mode = 1
-  elseif fish_step_seed(fish, 2) < 0.38 then
+  elseif section == dense_section and (bar_step == 3 or bar_step == 6 or bar_step == 11 or bar_step == 14) then
+    if fish_step_seed(fish, 7 + bar_step) < 0.72 then
+      mode = 2
+    end
+  elseif bar_step % 4 == 2 and fish_step_seed(fish, 8 + bar_step) < density then
     mode = 2
-  else
+  elseif bar_step % 2 == 1 and fish_step_seed(fish, 9 + bar_step) < density * 0.34 then
+    mode = 2
+  end
+
+  if not mode then
     return
   end
 
-  local note = scale_hz(current_game, 1 + (mode == 2 and (local_step % 3) or 0), mode == 2 and 1 or 0)
-  local amp = (mode == 0 and 1.1 or 0.78) * (amp_scale or 1)
+  local degree_offset = mode == 2 and ((phrase_step + section) % 4) or 0
+  local note = scale_hz(current_game, 1 + degree_offset, mode == 2 and 1 or 0)
+  local accent = 0.72 + density * 0.38
+  local amp = (mode == 0 and 1.05 or 0.72) * accent * (amp_scale or 1)
   fish_event(mode, note, timbre(fish, 10 + mode), amp, pan_from_fish(fish))
+
+  if section == dense_section and mode == 2 and fish_step_seed(fish, 40 + bar_step) < 0.36 then
+    delayed_fish_event(
+      1 / 8,
+      2,
+      scale_hz(current_game, 3 + (bar_step % 3), 1),
+      timbre(fish, 44),
+      amp * 0.68,
+      pan_from_fish(fish) * -0.6
+    )
+  end
 end
 
 local function arp_degree(fish, index)
@@ -145,7 +187,7 @@ local function arp_degree(fish, index)
 end
 
 local function circle_step(fish, amp_scale)
-  local subdivision = choice(fish.pattern_seed, 13, { 2, 2, 1 })
+  local subdivision = choice(fish.pattern_seed, 13, { 1, 1, 1, 2 })
   if step16 % subdivision ~= 0 then
     return
   end
@@ -154,7 +196,21 @@ local function circle_step(fish, amp_scale)
   local degree = arp_degree(fish, index)
   local octave = choice(fish.timbre_seed, 14, { 1, 1, 2 })
   local note = scale_hz(current_game, degree, octave)
-  fish_event(3, note, timbre(fish, 15), 0.55 * (amp_scale or 1), pan_from_fish(fish))
+  local amp = 0.48 * (amp_scale or 1)
+  local pan = pan_from_fish(fish)
+  fish_event(3, note, timbre(fish, 15), amp, pan)
+
+  if fish_step_seed(fish, 50) < 0.42 then
+    local next_degree = arp_degree(fish, index + 1)
+    delayed_fish_event(
+      1 / 8,
+      3,
+      scale_hz(current_game, next_degree, octave),
+      timbre(fish, 51),
+      amp * 0.82,
+      pan * -0.45
+    )
+  end
 end
 
 local function triangle_step(fish, amp_scale)
@@ -191,9 +247,9 @@ end
 
 local function trigger_preview(fish)
   if fish.type == "square" then
-    fish_event(2, scale_hz(current_game, 1, 1), timbre(fish, 30), 0.95, pan_from_fish(fish))
+    fish_event(2, scale_hz(current_game, 1, 1), timbre(fish, 30), 0.88, pan_from_fish(fish))
   elseif fish.type == "circle" then
-    preview_burst = { fish = fish, remaining = 4, index = 0 }
+    preview_burst = { fish = fish, remaining = 6, index = 0 }
   elseif fish.type == "triangle" then
     fish_event(4, scale_hz(current_game, 1, 1), timbre(fish, 31), 0.84, pan_from_fish(fish))
   end
@@ -223,7 +279,9 @@ local function update_preview_burst()
 
   local fish = preview_burst.fish
   local degree = arp_degree(fish, preview_burst.index)
-  fish_event(3, scale_hz(current_game, degree, 1), timbre(fish, 32), 0.55, pan_from_fish(fish))
+  local pan = pan_from_fish(fish)
+  fish_event(3, scale_hz(current_game, degree, 1), timbre(fish, 32), 0.50, pan)
+  delayed_fish_event(1 / 8, 3, scale_hz(current_game, arp_degree(fish, preview_burst.index + 1), 1), timbre(fish, 33), 0.36, pan * -0.4)
   preview_burst.index = preview_burst.index + 1
   preview_burst.remaining = preview_burst.remaining - 1
 
@@ -264,7 +322,7 @@ function Music.drone_params(game)
   local depth_signal = game.depth_signal or signal
   local fish = (game.overlap_signal or 0) * depth_signal
   local pressure = depth
-  local brightness = clamp(1 - depth * 0.72 + signal * 0.18 + fish * 0.26, 0, 1)
+  local brightness = clamp(0.42 - depth * 0.10 + signal * 0.08 + fish * 0.18, 0.18, 0.72)
   local root_hz = base_root_hz(game)
 
   return {
