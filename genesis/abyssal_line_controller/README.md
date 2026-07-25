@@ -41,8 +41,9 @@ Expected behavior:
 - Pressing the LED button sends `INPUT_BUTTON`.
 - The LED button blinks during resonance, lights in safe tension, and stays on
   at surface.
-- The vibration motor pulses on connect, bite-ready, button press, error, and
-  pattern events. Encoder movement stays silent because it is continuous control.
+- The vibration motor pulses only on bite-ready and successful capture.
+  Encoder movement, button press, connection, errors, and pattern events stay
+  silent because they are continuous or routine control.
 
 The Genesis side still does not own authoritative game state.
 

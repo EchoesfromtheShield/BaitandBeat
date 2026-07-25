@@ -34,7 +34,7 @@ Connected modules:
 Build result:
 
 - RAM: 19012 bytes used, 5.8%
-- Flash: 273737 bytes used, 20.9% of app partition
+- Flash: 274329 bytes used, 20.9% of app partition
 
 ## PC Round Trip
 
@@ -108,8 +108,8 @@ Follow-up on the first corrected firmware test:
 - The ERM did not vibrate with `P3_IO1` mapped to GPIO17.
 - Axiometa diagnostic output showed `MOTOR_HIGH pin=16`, `LED_HIGH pin=5`, and
   `ENCODER_BUTTON_PRESS pin=4`.
-- M0 now uses `VIBRATION_MOTOR_PIN = 16` and prints `HAPTIC_PULSE` whenever it
-  tries to drive the motor.
+- M0 now uses `VIBRATION_MOTOR_PIN = 16` and prints `HAPTIC_PULSE` when the
+  active game firmware intentionally drives the motor.
 - Full Axiometa `PINMAP_JSON` later confirmed:
   - `P1_IO0=4`, `P1_IO1=3`, `P1_IO2=2`;
   - `P2_IO0=7`, `P2_IO1=6`, `P2_IO2=5`;
@@ -119,9 +119,9 @@ Follow-up on the first corrected firmware test:
 
 ## Current Limitations
 
-- Encoder, LED button, and ERM motor need one verification pass together on the
-  corrected M0 firmware.
-- Norns-side serial adapter is not committed yet.
+- The current haptic policy still needs one Norns pass with the updated
+  firmware: motor only on bite-ready and successful capture.
+- Norns-side SuperCollider changes still need live launch validation on device.
 
 ## Selected Transport For Next Test
 

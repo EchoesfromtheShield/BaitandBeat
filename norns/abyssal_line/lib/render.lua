@@ -88,12 +88,56 @@ local function draw_fish_signal(x, y, level, signal, ready)
   end
 end
 
+local function draw_fish_shape(shape, x, y, level, signal, ready)
+  local radius = 2 + clamp(signal, 0, 1) * 7
+
+  screen.level(math.max(1, level - 4))
+  screen.circle(x, y, radius)
+  screen.stroke()
+
+  if ready then
+    screen.level(15)
+    screen.circle(x, y, radius + 3)
+    screen.stroke()
+  end
+
+  screen.level(level)
+  if shape == "square" then
+    screen.rect(x - 2, y - 2, 5, 5)
+    screen.fill()
+  elseif shape == "circle" then
+    screen.circle(x, y, 3)
+    screen.fill()
+  elseif shape == "triangle" then
+    screen.move(x, y - 4)
+    screen.line(x + 4, y + 3)
+    screen.line(x - 4, y + 3)
+    screen.line(x, y - 4)
+    screen.fill()
+  else
+    draw_fish_signal(x, y, level, signal, ready)
+  end
+end
+
 local function draw_ascent_trace(hook_x, fish_y, top)
   screen.level(3)
   for y = top, fish_y, 7 do
     screen.move(hook_x - 2, y)
     screen.line(hook_x + 2, y)
     screen.stroke()
+  end
+end
+
+local function draw_loop_slots(captured_by_type)
+  local slots = {
+    { type = "square", x = 9 },
+    { type = "circle", x = 20 },
+    { type = "triangle", x = 31 },
+  }
+
+  for _, slot in ipairs(slots) do
+    local active = captured_by_type and captured_by_type[slot.type]
+    draw_fish_shape(slot.type, slot.x, 45, active and 12 or 3, active and 0.9 or 0.0, false)
   end
 end
 
@@ -148,6 +192,7 @@ function Render.redraw(game, drone, genesis)
   screen.text(string.format("%03dm p%d", depth_m, page))
 
   if game.state == "STRUGGLE" then
+    local fish = game.hooked_fish or game.active_fish
     local fish_y = clamp(world_to_y(game.fish_depth, view_top, view_span, top, bottom), top, bottom)
     local fish_x = fish_to_x(game.fish_x)
     draw_ascent_trace(hook_x, fish_y, top)
@@ -157,7 +202,14 @@ function Render.redraw(game, drone, genesis)
     screen.line(fish_x, fish_y)
     screen.stroke()
     draw_hook(hook_x, hook_y, false)
-    draw_fish_signal(fish_x, fish_y, 7 + math.floor(game.signal * 8), game.signal, false)
+    draw_fish_shape(
+      fish and fish.type or "square",
+      fish_x,
+      fish_y,
+      7 + math.floor(game.signal * 8),
+      game.signal,
+      false
+    )
   else
     screen.level(12)
     screen.move(hook_x, top)
@@ -165,12 +217,14 @@ function Render.redraw(game, drone, genesis)
     screen.stroke()
     draw_hook(hook_x, hook_y, game.bite_ready)
 
-    if game.state == "RESONANCE" then
-      local fish_y = world_to_y(game.creature_depth, view_top, view_span, top, bottom)
+    for _, fish in ipairs(game.fish or {}) do
+      local fish_y = world_to_y(fish.depth, view_top, view_span, top, bottom)
       if fish_y >= top - 8 and fish_y <= bottom + 8 then
-        local fish_x = fish_to_x(game.fish_x)
-        local level = 3 + math.floor(game.signal * 12)
-        draw_fish_signal(fish_x, fish_y, level, game.signal, game.bite_ready)
+        local fish_x = fish_to_x(fish.x)
+        local signal = fish.signal or 0
+        local level = 3 + math.floor(signal * 12)
+        local ready = game.bite_ready and game.active_fish == fish
+        draw_fish_shape(fish.type, fish_x, fish_y, level, signal, ready)
       end
     end
   end
@@ -196,8 +250,7 @@ function Render.redraw(game, drone, genesis)
   screen.level(6)
   screen.move(2, 19)
   screen.text(string.format("S %.2f", game.signal))
-  screen.move(2, 29)
-  screen.text(string.format("L %d", #game.captured_layers))
+  draw_loop_slots(game.captured_by_type)
 
   local genesis_label = "G --"
   if genesis and genesis.connected then

@@ -26,10 +26,10 @@ Required:
 - `CAST`, `EXPLORE`, `RESONANCE`, `STRUGGLE`, `SURFACE`;
 - local controls using Norns keys/encoders;
 - depth-driven continuous drone;
-- resonance near one hidden creature;
+- resonance near three hidden fish, one per musical role;
 - bite after stillness in the bite zone;
 - tension, slack, overload, capture progress;
-- one captured persistent audio layer.
+- up to three captured persistent loops, one per fish type.
 
 Exit gate: the loop is playable with only Norns controls.
 
@@ -42,7 +42,8 @@ Required:
 - encoder delta controls depth and tension;
 - button casts and hooks;
 - Genesis OLED shows depth, signal, tension, and state;
-- Genesis LED matrix shows resonance or tension;
+- Genesis LED shows resonance, tension, and surface state;
+- Genesis motor vibrates only for bite-ready and successful capture;
 - Norns remains authoritative after reconnect.
 
 Exit gate: a full capture can be completed using Genesis only.
@@ -54,9 +55,9 @@ Goal: decide whether the core gesture is worth keeping.
 Required:
 
 - drone depth mapping is expressive enough to explore;
-- creature pull events are audible as a pattern;
-- tension changes the pattern clearly;
-- captured layer remains musically useful;
+- fish roles are musically distinct: percussion, arpeggio, and harmony arcs;
+- struggle patterns are clocked at 90 BPM and clearly quantized;
+- captured loops remain musically useful together;
 - no additional game systems added.
 
 Exit gate: record a short session and decide whether to continue or redesign.

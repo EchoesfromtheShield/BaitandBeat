@@ -75,23 +75,31 @@ When capture progress reaches the surface, the struggle pattern is stabilized
 as a persistent musical layer. The player may cast again and search for the
 next layer.
 
-## First Creature
+## First Musical Fish Set
 
-Do not implement multiple species yet. The first creature is a single readable
-behavior phrase:
+The active vertical slice now uses three musical fish archetypes on every cast.
+They are not inventory, species, or progression systems: they are three fixed
+roles that make the music legible.
 
-```text
-rest
-small tug
-small tug
-long pull
-rest
-three fast vibrations
-```
+- square: percussive kick/snare/rim loop;
+- circle: bright square-wave arpeggiator;
+- triangle: slow harmony arcs.
 
-The behavior phrase should generate the temporary pattern during `STRUGGLE`.
-The captured layer should retain a trace of the actual fight: average tension,
-slack count, overload count, fight duration, and event timing.
+Each cast spawns all three at different random depths. Fish have deterministic
+pattern and timbre seeds, so a new square is still a square but can choose a
+different rhythmic subdivision and sound color.
+
+When a fish approaches the hook in `RESONANCE`, it previews its role:
+
+- square: one percussive hit;
+- circle: a short arpeggio burst;
+- triangle: one slow-attack harmonic note.
+
+When the player presses on bite-ready and enters `STRUGGLE`, the fish generates
+its quantized pattern from the Norns clock. If a loop of the same type is
+already captured, it is removed immediately at the hook moment. If the new fish
+escapes or the line breaks, the old loop remains lost. A successful capture
+stores the new loop for that fish type.
 
 ## Explicit Non-Goals
 
@@ -104,4 +112,3 @@ slack count, overload count, fight duration, and event timing.
 - no persistence;
 - no multi-creature rules;
 - no complex protocol before the transport spike passes.
-

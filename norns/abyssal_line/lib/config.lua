@@ -24,6 +24,7 @@ Config.SLACK_FAIL_S = 2.0
 Config.OVERLOAD_FAIL_S = 1.2
 Config.CAPTURE_RATE = 0.055
 
+Config.BPM = 90
 Config.ROOT_HZ = 73.416
 Config.BASE_DRONE_HZ = Config.ROOT_HZ
 Config.SCALE = { 0, 3, 5, 7, 10, 12, 15, 17, 19, 22 }

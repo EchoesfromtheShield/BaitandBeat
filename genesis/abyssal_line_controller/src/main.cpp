@@ -412,13 +412,13 @@ void handleRemoteLine(const String& line) {
     lastGameStateMs = millis();
     sendEnvelope("DEBUG_RX", "{\"remote_type\":\"HELLO_ACK\"}");
     pulseLed(180);
-    pulseMotor(HardwareConfig::CONNECT_HAPTIC_MS);
     return;
   }
 
   if (line.indexOf("\"type\":\"GAME_STATE\"") >= 0) {
     lastGameStateMs = millis();
     sendEnvelope("DEBUG_RX", "{\"remote_type\":\"GAME_STATE\"}");
+    const String previousState = remoteState;
     remoteState = parseStringField(line, "state", remoteState);
     remoteSignal = parseFloatField(line, "signal_0_1", remoteSignal);
     remoteTension = parseFloatField(line, "tension_0_1", remoteTension);
@@ -430,13 +430,17 @@ void handleRemoteLine(const String& line) {
       pulseMotor(HardwareConfig::BITE_HAPTIC_MS);
     }
     lastBiteReady = biteReady;
+
+    if (remoteState == "SURFACE" && previousState != "SURFACE") {
+      pulseLed(420);
+      pulseMotor(HardwareConfig::CAPTURE_HAPTIC_MS);
+    }
     return;
   }
 
   if (line.indexOf("\"type\":\"PATTERN_EVENT\"") >= 0) {
     sendEnvelope("DEBUG_RX", "{\"remote_type\":\"PATTERN_EVENT\"}");
     pulseLed(35);
-    pulseMotor(HardwareConfig::PATTERN_HAPTIC_MS);
     return;
   }
 
@@ -444,7 +448,6 @@ void handleRemoteLine(const String& line) {
     sendEnvelope("DEBUG_RX", "{\"remote_type\":\"ERROR\"}");
     connected = false;
     lastBiteReady = false;
-    pulseMotor(HardwareConfig::ERROR_HAPTIC_MS);
   }
 }
 
@@ -488,7 +491,6 @@ void pollButton() {
   sendButton(debouncedButton ? "press" : "release");
   if (debouncedButton) {
     pulseLed(HardwareConfig::BUTTON_PRESS_LED_MS);
-    pulseMotor(HardwareConfig::BUTTON_PRESS_HAPTIC_MS);
   }
 }
 

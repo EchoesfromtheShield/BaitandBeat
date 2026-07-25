@@ -57,11 +57,8 @@ constexpr bool ACTIVE_LOW_BUTTON = true;
 constexpr bool ACTIVE_HIGH_LED = true;
 constexpr bool ACTIVE_HIGH_MOTOR = true;
 
-constexpr uint16_t CONNECT_HAPTIC_MS = 600;
-constexpr uint16_t BITE_HAPTIC_MS = 600;
-constexpr uint16_t PATTERN_HAPTIC_MS = 180;
-constexpr uint16_t ERROR_HAPTIC_MS = 600;
+constexpr uint16_t BITE_HAPTIC_MS = 500;
+constexpr uint16_t CAPTURE_HAPTIC_MS = 850;
 constexpr uint16_t BUTTON_PRESS_LED_MS = 2000;
-constexpr uint16_t BUTTON_PRESS_HAPTIC_MS = 1200;
 
 } // namespace HardwareConfig

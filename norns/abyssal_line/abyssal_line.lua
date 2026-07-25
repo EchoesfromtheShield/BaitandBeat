@@ -30,7 +30,7 @@ end
 
 function init()
   game = Game.new(Config)
-  Music.init()
+  Music.init(game)
   genesis = GenesisSerial.new(Config)
   genesis:open()
   clock.run(loop)

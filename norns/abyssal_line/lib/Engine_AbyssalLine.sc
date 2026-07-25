@@ -95,6 +95,45 @@ Engine_AbyssalLine : CroneEngine {
 			Out.ar(out, Pan2.ar(sig, pan.clip(-1, 1)));
 		}).add;
 
+		SynthDef(\AbyssalFishEvent, {
+			arg out = 0, mode = 0, note = 110, timbre = 0.5, amp = 0.7, pan = 0;
+
+			var safeMode = mode.clip(0, 4);
+			var freq = note.clip(28, 5200);
+			var timbreLag = timbre.clip(0, 1);
+			var lifeRel = Select.kr(safeMode, [0.45, 0.34, 0.18, 0.52, 3.1]);
+			var life = Line.kr(1, 0, lifeRel, doneAction: 2);
+			var kickEnv = Env.perc(0.001, 0.30, 1, -6).kr;
+			var kickPitch = Env.perc(0.001, 0.075, 58 + timbreLag * 44, -7).kr;
+			var kickClick = HPF.ar(WhiteNoise.ar(Env.perc(0.001, 0.014).kr * 0.22), 1800);
+			var kick = SinOsc.ar(42 + kickPitch, 0, kickEnv * 1.35) + kickClick;
+			var snareEnv = Env.perc(0.001, 0.22 + timbreLag * 0.10, 1, -4).kr;
+			var snareTone = SinOsc.ar(150 + timbreLag * 70, 0, snareEnv * 0.24);
+			var snare = BPF.ar(WhiteNoise.ar(snareEnv * 1.0), 1700 + timbreLag * 2400, 0.45) + snareTone;
+			var rimEnv = Env.perc(0.001, 0.075, 1, -8).kr;
+			var rim = Ringz.ar(WhiteNoise.ar(rimEnv * 0.42), freq * (2.8 + timbreLag * 2.6), 0.045 + timbreLag * 0.045);
+			var arpEnv = Env.perc(0.003, 0.24 + timbreLag * 0.16, 1, -4).kr;
+			var interval = Select.kr((timbreLag * 3.999).floor, [1.189207, 1.33484, 1.498307, 1.781797]);
+			var arcEnv = Env.linen(0.42 + timbreLag * 0.35, 1.25, 0.90, 1, -3).kr;
+			var arp;
+			var arc;
+			var sig;
+
+			arp = Pulse.ar(freq * [0.997, 1.003], 0.42 + timbreLag * 0.18, arpEnv * 0.36).sum;
+			arp = RLPF.ar(arp, (freq * (5 + timbreLag * 16)).clip(800, 14000), 0.10 + timbreLag * 0.12);
+			arc = (
+				LFTri.ar(freq, 0, 0.34) +
+				LFTri.ar(freq * interval, 0, 0.24) +
+				Saw.ar(freq * 0.5, 0.10)
+			) * arcEnv;
+			arc = RLPF.ar(arc, (freq * (2.2 + timbreLag * 7)).clip(450, 9000), 0.18);
+			sig = Select.ar(safeMode, [kick, snare, rim, arp, arc]);
+
+			sig = LeakDC.ar(sig);
+			sig = Limiter.ar(sig * amp.clip(0, 2.4) * life * 1.6, 0.95, 0.004);
+			Out.ar(out, Pan2.ar(sig, pan.clip(-1, 1)));
+		}).add;
+
 		SynthDef(\AbyssalLayer, {
 			arg out = 0, gate = 1, layer = 0, root = 55, rate = 0.3,
 				texture = 0.4, amp = 0.1, pan = 0;
@@ -145,6 +184,16 @@ Engine_AbyssalLine : CroneEngine {
 				\note, msg[2].asFloat,
 				\pull, msg[3].asFloat,
 				\tension, msg[4].asFloat,
+				\pan, msg[5].asFloat
+			]);
+		});
+
+		this.addCommand(\fish_event, "iffff", { arg msg;
+			Synth(\AbyssalFishEvent, [
+				\mode, msg[1].asInteger,
+				\note, msg[2].asFloat,
+				\timbre, msg[3].asFloat,
+				\amp, msg[4].asFloat,
 				\pan, msg[5].asFloat
 			]);
 		});

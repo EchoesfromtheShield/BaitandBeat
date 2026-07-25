@@ -1,7 +1,7 @@
 # Norns Tests
 
-No automated Norns test runner is configured yet. For M1, test the state
-machine first with:
+No automated Norns test runner is configured yet. The host simulation remains
+useful as a basic state/transport smoke test:
 
 ```powershell
 python tools\simulate_vertical_slice.py
@@ -32,8 +32,8 @@ Expected behavior:
 - Genesis button sends cast/hook input.
 - Genesis encoder changes line depth after casting.
 - Genesis LED follows `RESONANCE`, `STRUGGLE`, and `SURFACE` state feedback.
-- Genesis motor pulses on connection, button press, bite-ready, encoder ticks,
-  and pattern events.
+- Genesis motor pulses only when a bite becomes ready and when a capture
+  reaches `SURFACE`.
 
 Fallback controls remain active:
 

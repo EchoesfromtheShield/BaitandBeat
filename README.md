@@ -15,9 +15,9 @@ Implement only the communication spike and a minimal vertical slice:
 
 - `CAST`: cast the line into the sea.
 - `EXPLORE`: Genesis encoder moves the line down, up, or leaves it still.
-- `RESONANCE`: a hidden creature contaminates the drone near its depth.
-- `STRUGGLE`: creature movement directly emits musical pattern events.
-- `SURFACE`: the captured pattern becomes a persistent musical layer.
+- `RESONANCE`: one of three hidden fish contaminates the drone near its depth.
+- `STRUGGLE`: the hooked fish role drives a quantized musical pattern.
+- `SURFACE`: the captured fish becomes the persistent loop for its role.
 
 No species system, inventory, resources, economy, complex menus, persistence,
 mutation tree, or multi-page Genesis UI.
@@ -37,9 +37,9 @@ sources/                      Read-only imported PELAGOS reference docs
 
 ## Run The Host Simulation
 
-The current runnable artifact is a host-side simulation of the vertical slice.
-It proves state transitions and message payload shape without requiring Norns
-or Genesis hardware.
+The host-side simulation is a lightweight state/transport sanity check. The
+current clocked three-fish musical behavior lives in the Norns Lua script and
+custom SuperCollider engine.
 
 ```powershell
 python tools\simulate_vertical_slice.py
@@ -75,6 +75,17 @@ encoder/button input, and streams authoritative `GAME_STATE` and
 the serial device is missing, `G io` when the port is open, and `G ok` after
 the Genesis handshake.
 
+The active musical slice uses the Norns clock at 90 BPM. Each cast creates
+three seeded fish at different depths:
+
+- square: percussive kick/snare/rim loop;
+- circle: bright square-wave arpeggiator;
+- triangle: slow harmony arcs.
+
+Only one loop per fish type persists. Hooking a new fish of a type that is
+already looping removes the old loop immediately; if the new fight is lost, the
+old loop is still gone.
+
 ## Genesis M0 Hardware Spike
 
 Current known setup:
@@ -102,3 +113,6 @@ python tools\serial_spike_host.py --port COM20
 
 Norns sees the Genesis Mini as `/dev/ttyACM0`. The Norns-side serial adapter
 streams authoritative `GAME_STATE` messages from the vertical slice.
+
+Genesis motor haptics are intentionally sparse: vibration is used only for
+bite-ready and successful capture.
