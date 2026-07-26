@@ -10,6 +10,8 @@ local preview_latch = {}
 local loop_state = {}
 local TIMBRE_FAMILIES = 8
 local CAPTURE_HANDOFF_STEPS = 24
+local FREE_FADE_STEPS = 18
+local REPLACE_FADE_STEPS = 28
 local MOTION_MOD_SCALE = {
   square = { x = 0.16, y = 0.10 },
   circle = { x = 0.12, y = 0.08 },
@@ -532,9 +534,12 @@ local function update_struggle()
 end
 
 local function update_loops()
-  for _, layer in pairs(loop_state) do
+  local remove_keys = {}
+
+  for key, layer in pairs(loop_state) do
     local volume = clamp(layer.volume_0_1 or 0.85, 0, 1)
     local handoff = 0
+    local fade = 1
 
     if layer.handoff_steps and layer.handoff_steps > 0 then
       handoff = clamp(layer.handoff_steps / math.max(1, layer.handoff_total_steps or CAPTURE_HANDOFF_STEPS), 0, 1)
@@ -544,8 +549,23 @@ local function update_loops()
       layer.handoff_total_steps = nil
     end
 
+    if layer.fadeout_steps then
+      fade = clamp(layer.fadeout_steps / math.max(1, layer.fadeout_total_steps or FREE_FADE_STEPS), 0, 1)
+      layer.fadeout_steps = layer.fadeout_steps - 1
+      if layer.fadeout_steps <= 0 then
+        table.insert(remove_keys, key)
+      end
+    end
+
     layer.handoff_0_1 = handoff
-    run_fish_step(layer, (0.62 + (layer.loop_amp or 0)) * volume * (0.42 + (1 - handoff) * 0.58))
+    local target_amp = (0.62 + (layer.loop_amp or 0)) * volume
+    local entry_amp = layer.capture_amp_scale or target_amp
+    local amp = (target_amp + (entry_amp - target_amp) * handoff) * fade
+    run_fish_step(layer, amp)
+  end
+
+  for _, key in ipairs(remove_keys) do
+    loop_state[key] = nil
   end
 end
 
@@ -614,14 +634,21 @@ end
 
 function Music.remove_loop_event(event)
   if event.loop_key then
-    loop_state[event.loop_key] = nil
+    local layer = loop_state[event.loop_key]
+    if layer then
+      local steps = event.reason == "replace" and REPLACE_FADE_STEPS or FREE_FADE_STEPS
+      layer.fadeout_steps = steps
+      layer.fadeout_total_steps = steps
+    end
     return
   end
 
   if event.fish_type then
     for key, layer in pairs(loop_state) do
       if layer.type == event.fish_type then
-        loop_state[key] = nil
+        local steps = event.reason == "replace" and REPLACE_FADE_STEPS or FREE_FADE_STEPS
+        layer.fadeout_steps = steps
+        layer.fadeout_total_steps = steps
         return
       end
     end
@@ -677,6 +704,7 @@ function Music.capture_loop(event)
     handoff_steps = CAPTURE_HANDOFF_STEPS,
     handoff_total_steps = CAPTURE_HANDOFF_STEPS,
     handoff_0_1 = 1,
+    capture_amp_scale = layer.capture_amp_scale or 1.2,
     loop_amp = clamp((layer.avg_tension or 0.4) * 0.35 + (layer.max_tension or 0.5) * 0.25, 0, 0.55),
   }
 end

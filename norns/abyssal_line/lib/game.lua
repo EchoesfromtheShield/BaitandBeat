@@ -15,13 +15,13 @@ local CAPTURE_LIMITS = {
 
 local PULL_PATTERN = {
   { name = "rest", duration = 1.10, pull = 0.00, resistance = 0.0 },
-  { name = "small_tug", duration = 0.30, pull = 0.46, resistance = 0.35 },
+  { name = "small_tug", duration = 0.30, pull = 0.52, resistance = 0.45 },
   { name = "rest", duration = 0.85, pull = 0.00, resistance = 0.0 },
-  { name = "long_pull", duration = 1.05, pull = 0.74, resistance = 0.78 },
+  { name = "long_pull", duration = 1.05, pull = 0.86, resistance = 0.86 },
   { name = "rest", duration = 0.95, pull = 0.00, resistance = 0.0 },
-  { name = "vibration", duration = 0.22, pull = 0.48, resistance = 0.45 },
-  { name = "vibration", duration = 0.22, pull = 0.62, resistance = 0.60 },
-  { name = "hard_drag", duration = 0.72, pull = 0.82, resistance = 1.00 },
+  { name = "vibration", duration = 0.22, pull = 0.58, resistance = 0.65 },
+  { name = "vibration", duration = 0.22, pull = 0.72, resistance = 0.78 },
+  { name = "hard_drag", duration = 0.72, pull = 0.96, resistance = 1.00 },
   { name = "rest", duration = 1.15, pull = 0.00, resistance = 0.0 },
 }
 
@@ -119,6 +119,7 @@ function Game.new(config)
     captured_layers = {},
     captured_events = {},
     pending_events = {},
+    pending_replacement_settings = nil,
     generation = 0,
     last_reason = "",
   }
@@ -187,6 +188,7 @@ function Game:free_captured(index)
   self:_rebuild_captured_layers()
   self:_queue({
     type = "loop_removed",
+    reason = "free",
     fish_type = fish_type.type,
     slot = fish_type.slot,
     loop_key = removed.loop_key,
@@ -324,9 +326,16 @@ function Game:press()
     if #layers >= limit then
       local removed = table.remove(layers, 1)
       self.captured_by_type[fish.type] = layers
+      self.pending_replacement_settings = removed and {
+        fish_type = fish.type,
+        volume_0_1 = removed.volume_0_1,
+        mod_x = removed.mod_x,
+        mod_y = removed.mod_y,
+      } or nil
       self:_rebuild_captured_layers()
       self:_queue({
         type = "loop_removed",
+        reason = "replace",
         fish_type = fish.type,
         slot = fish.slot,
         loop_key = removed and removed.loop_key or nil,
@@ -384,6 +393,7 @@ function Game:reset_to_explore()
   self.tension_control = 0.46
   self.fish_pull_tension = 0
   self.struggle_resistance = 1
+  self.pending_replacement_settings = nil
 end
 
 function Game:_return_to_cast(reason)
@@ -408,6 +418,7 @@ function Game:_return_to_cast(reason)
   self.tension_control = 0.46
   self.fish_pull_tension = 0
   self.struggle_resistance = 1
+  self.pending_replacement_settings = nil
   self.last_reason = reason
 end
 
@@ -433,6 +444,7 @@ function Game:_return_to_surface(reason)
   self.tension_control = 0.46
   self.fish_pull_tension = 0
   self.struggle_resistance = 1
+  self.pending_replacement_settings = nil
   self.last_reason = reason
 end
 
@@ -578,7 +590,7 @@ function Game:_update_struggle(dt, events)
   end
 
   local ascent_depth = fish.hooked_depth * (1 - self.capture_progress)
-  local pull_offset = item.pull * 0.18
+  local pull_offset = item.pull * 0.24
   local target = clamp(ascent_depth + pull_offset, 0, 1)
   fish.fish_depth = fish.fish_depth + (target - fish.fish_depth) * 0.18
   fish.motion_x = clamp(math.abs(fish.x - previous_x) / math.max(dt * 0.42, 0.0001), 0, 1)
@@ -657,6 +669,17 @@ function Game:_update_struggle(dt, events)
       mod_x = 0.5,
       mod_y = 0.5,
     }
+    local replacement = self.pending_replacement_settings
+    if replacement and replacement.fish_type == fish.type then
+      layer.volume_0_1 = replacement.volume_0_1 or layer.volume_0_1
+      layer.mod_x = replacement.mod_x or layer.mod_x
+      layer.mod_y = replacement.mod_y or layer.mod_y
+    end
+    local safe_center = (self.config.SAFE_TENSION_MIN + self.config.SAFE_TENSION_MAX) * 0.5
+    local safe_span = (self.config.SAFE_TENSION_MAX - self.config.SAFE_TENSION_MIN) * 0.5
+    local final_safe = safe_span > 0 and clamp(1 - math.abs(self.tension - safe_center) / safe_span, 0, 1) or 0
+    layer.capture_amp_scale = 0.95 + final_safe * 0.45
+    self.pending_replacement_settings = nil
 
     local layers = self.captured_by_type[fish.type] or {}
     table.insert(layers, layer)
