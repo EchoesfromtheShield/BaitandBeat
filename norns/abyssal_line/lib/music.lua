@@ -168,7 +168,14 @@ local function square_step(fish, amp_scale)
   local degree_offset = mode == 2 and ((phrase_step + section) % 4) or 0
   local note = scale_hz(current_game, 1 + degree_offset, mode == 2 and 1 or 0)
   local accent = 0.72 + density * 0.38
-  local amp = (mode == 0 and 1.05 or 0.72) * accent * (amp_scale or 1)
+  local base_amp = 0.42
+  if mode == 0 then
+    base_amp = 1.20
+  elseif mode == 1 then
+    base_amp = 0.62
+  end
+
+  local amp = base_amp * accent * (amp_scale or 1)
   local motion_x, motion_y = movement_from_fish(fish)
   fish_event(mode, note, timbre(fish, 10 + mode), amp, pan_from_fish(fish), motion_x, motion_y)
 
@@ -178,7 +185,7 @@ local function square_step(fish, amp_scale)
       2,
       scale_hz(current_game, 3 + (bar_step % 3), 1),
       timbre(fish, 44),
-      amp * 0.68,
+      amp * 0.46,
       pan_from_fish(fish) * -0.6,
       motion_x,
       motion_y
