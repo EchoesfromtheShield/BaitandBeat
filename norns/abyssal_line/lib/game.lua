@@ -9,8 +9,8 @@ local FISH_TYPES = {
 
 local CAPTURE_LIMITS = {
   square = 1,
-  circle = 2,
-  triangle = 2,
+  circle = 1,
+  triangle = 1,
 }
 
 local PULL_PATTERN = {
@@ -72,25 +72,19 @@ local function rand_range(lo, hi)
   return lo + math.random() * (hi - lo)
 end
 
-local function random_depth(existing)
-  local depth = 0.2
+local function distributed_depths()
+  local depths = {
+    rand_range(0.18, 0.34),
+    rand_range(0.50, 0.68),
+    rand_range(0.90, 0.97),
+  }
 
-  for _ = 1, 24 do
-    depth = rand_range(0.16, 0.88)
-    local ok = true
-    for _, other in ipairs(existing) do
-      if math.abs(depth - other) < 0.13 then
-        ok = false
-        break
-      end
-    end
-
-    if ok then
-      return depth
-    end
+  for index = #depths, 2, -1 do
+    local swap_index = math.random(1, index)
+    depths[index], depths[swap_index] = depths[swap_index], depths[index]
   end
 
-  return depth
+  return depths
 end
 
 function Game.new(config)
@@ -175,13 +169,11 @@ function Game:_make_fish(def, depth)
 end
 
 function Game:_spawn_fish_set()
-  local depths = {}
+  local depths = distributed_depths()
   self.fish = {}
 
-  for _, def in ipairs(FISH_TYPES) do
-    local depth = random_depth(depths)
-    table.insert(depths, depth)
-    table.insert(self.fish, self:_make_fish(def, depth))
+  for index, def in ipairs(FISH_TYPES) do
+    table.insert(self.fish, self:_make_fish(def, depths[index]))
   end
 
   self.active_fish = nil

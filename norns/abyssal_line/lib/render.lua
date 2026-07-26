@@ -219,9 +219,14 @@ local function draw_boat(surface_y, line_x)
   return tip_y
 end
 
-local function draw_water_noise(view_top, view_span)
+local function draw_water_noise(view_top, view_span, surface_y)
+  local start_y = 6
+  if surface_y then
+    start_y = math.max(start_y, math.floor(surface_y) + 4)
+  end
+
   screen.level(2)
-  for y = 6, SCREEN_H - 3, 9 do
+  for y = start_y, SCREEN_H - 3, 9 do
     local world_depth = clamp(view_top + (y / SCREEN_H) * view_span, 0, 1)
     local spacing = 21 - math.floor(world_depth * 5)
     local phase = math.floor(world_depth * 97 + y * 3) % spacing
@@ -289,9 +294,7 @@ local function draw_main_page(game)
   local surface_y = world_to_y(0, view_top, view_span)
   local line_start_y = 0
 
-  if game.state ~= "CAST" and game.state ~= "SURFACE" then
-    draw_water_noise(view_top, view_span)
-  end
+  draw_water_noise(view_top, view_span, surface_y)
 
   if surface_y > -12 and surface_y < SCREEN_H + 8 then
     draw_sky(surface_y, render_frame)
@@ -361,9 +364,9 @@ end
 
 local function draw_loop_slots(captured_by_type, y)
   local slots = {
-    { type = "square", x = 75, max = 1 },
-    { type = "circle", x = 90, max = 2 },
-    { type = "triangle", x = 113, max = 2 },
+    { type = "square", x = 80, max = 1 },
+    { type = "circle", x = 96, max = 1 },
+    { type = "triangle", x = 112, max = 1 },
   }
 
   for _, slot in ipairs(slots) do
@@ -399,7 +402,7 @@ end
 
 local function draw_struggle_page(game)
   local fish = game.hooked_fish or game.active_fish
-  local zoom_x = clamp(64 + ((game.fish_x or 0.5) - 0.5) * 96, 27, 101)
+  local zoom_x = clamp(64 + ((game.fish_x or 0.5) - 0.5) * 76, 20, 108)
   local depth_delta = clamp((game.fish_depth or game.depth or 0) - (game.depth or 0), -0.18, 0.18)
   local zoom_y = clamp(27 + depth_delta * 86, 20, 30)
   local hook_x_pos = 64
@@ -439,7 +442,7 @@ local function draw_struggle_page(game)
     screen.stroke()
   end
 
-  draw_sprite_scaled(sprite, zoom_x, zoom_y, 14, 2)
+  draw_sprite_scaled(sprite, zoom_x, zoom_y, 14, 1)
 
   marked_bar(
     6,
