@@ -705,7 +705,7 @@ local function draw_settings_page(game, ui)
   screen.text(scale and scale.name or "Pentatonic Minor")
 end
 
-function Render.redraw(game, drone, genesis, page, ui)
+function Render.redraw(game, drone, page, ui)
   if screen == nil then
     return
   end

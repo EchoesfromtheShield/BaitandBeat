@@ -75,11 +75,4 @@ Config.ROOT_HZ = Config.NOTES[Config.ROOT_NOTE_INDEX].hz
 Config.BASE_DRONE_HZ = Config.ROOT_HZ
 Config.SCALE = Config.SCALES[Config.SCALE_INDEX].intervals
 
-Config.SERIAL_ENABLED = true
-Config.SERIAL_DEVICE = "/dev/ttyACM0"
-Config.SERIAL_BAUD = 115200
-Config.SERIAL_STATE_INTERVAL_S = 0.2
-Config.SERIAL_MAX_LINES_PER_TICK = 8
-Config.SERIAL_CONNECTION_TIMEOUT_S = 1.5
-
 return Config

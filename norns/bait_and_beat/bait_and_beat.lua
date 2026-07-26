@@ -15,12 +15,10 @@ engine.name = "BaitAndBeat"
 
 local Config = include("bait_and_beat/lib/config")
 local Game = include("bait_and_beat/lib/game")
-local GenesisSerial = include("bait_and_beat/lib/genesis_serial")
 local Music = include("bait_and_beat/lib/music")
 local Render = include("bait_and_beat/lib/render")
 
 local game = nil
-local genesis = nil
 local redraw_dirty = true
 local display_page = 1
 local observed_state = nil
@@ -46,10 +44,6 @@ end
 
 local function wrap_index(value, max)
   return ((value - 1) % max) + 1
-end
-
-local function norns_fallback_controls()
-  return not (genesis and genesis:is_connected())
 end
 
 local function ui_active()
@@ -180,21 +174,6 @@ local function handle_settings_press()
   return true
 end
 
-local genesis_input = {}
-
-function genesis_input:encoder(delta)
-  if not handle_settings_encoder(3, delta) and not handle_ui_encoder(3, delta) then
-    game:encoder(delta)
-  end
-end
-
-function genesis_input:press()
-  if not handle_settings_press() and not handle_ui_press() then
-    game:press()
-    update_display_page_from_state()
-  end
-end
-
 function update_display_page_from_state()
   if not game or game.state == observed_state then
     return
@@ -215,17 +194,11 @@ end
 local function loop()
   while true do
     clock.sleep(Config.TICK_S)
-    if genesis and genesis:poll(genesis_input) then
-      redraw_dirty = true
-    end
     update_display_page_from_state()
 
     local events = game:update(Config.TICK_S)
     update_display_page_from_state()
     Music.tick(game, events)
-    if genesis then
-      genesis:tick(Config.TICK_S, game, Music.drone_params(game), events)
-    end
 
     redraw_dirty = true
     redraw()
@@ -236,8 +209,6 @@ function init()
   game = Game.new(Config)
   observed_state = game.state
   Music.init(game)
-  genesis = GenesisSerial.new(Config)
-  genesis:open()
   clock.run(loop)
 end
 
@@ -263,7 +234,7 @@ function enc(n, delta)
     return
   end
 
-  if n == 3 and game and norns_fallback_controls() then
+  if n == 3 and game then
     game:encoder(delta)
     redraw_dirty = true
   end
@@ -274,7 +245,7 @@ function key(n, z)
     return
   end
 
-  if n == 3 and z == 1 and game and norns_fallback_controls() then
+  if n == 3 and z == 1 and game then
     game:press()
     update_display_page_from_state()
     redraw_dirty = true
@@ -286,6 +257,6 @@ function redraw()
     return
   end
 
-  Render.redraw(game, Music.drone_params(game), genesis, display_page, ui)
+  Render.redraw(game, Music.drone_params(game), display_page, ui)
   redraw_dirty = false
 end

@@ -31,7 +31,7 @@ information and control notes.
 
 ## Controls
 
-When Genesis Mini is not connected, Norns controls are used:
+Norns controls:
 
 - `E1`: change page.
 - `K3`: cast, hook, select, or back.
@@ -52,45 +52,17 @@ The music settings page includes:
 
 Each cast creates three fish at different depths:
 
-- square: percussive kick/snare/rim loop;
-- circle: bright square-wave arpeggiator;
-- triangle: slow harmony arcs.
+- crab: percussive kick/snare/rim loop;
+- fish: bright square-wave arpeggiator;
+- octopus: slow harmony arcs.
 
 Only one loop per fish type is kept. Catching a new fish of the same type fades
 the previous loop out; if the new fight is lost, the old loop remains gone.
 
-## Genesis Mini
-
-The optional Genesis Mini firmware lives in:
-
-```text
-genesis/bait_and_beat_controller
-```
-
-Current hardware profile:
-
-- Genesis Mini V1 Rev2, ESP32-S3-Mini-N4R2
-- P1 rotary encoder
-- P2 tactile LED button
-- P3 vibration motor ERM
-
-Build:
-
-```powershell
-cd genesis\bait_and_beat_controller
-python -m platformio run
-```
-
-Norns sees the Genesis Mini as `/dev/ttyACM0`. Genesis sends encoder/button
-input; Norns remains authoritative for game state and sound.
-
 ## Repository
 
 ```text
-docs/                         Design notes and hardware notes
-genesis/bait_and_beat_controller/
-                              Optional Genesis Mini firmware
+docs/                         Design notes
 norns/bait_and_beat/          Norns script, Lua modules, SC engine
-protocol/                     JSON-line protocol notes and fixtures
-tools/                        Host-side probes and simulators
+tools/                        Host-side simulator
 ```
