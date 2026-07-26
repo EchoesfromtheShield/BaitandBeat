@@ -674,6 +674,7 @@ function Game:_update_struggle(dt, events)
       layer.volume_0_1 = replacement.volume_0_1 or layer.volume_0_1
       layer.mod_x = replacement.mod_x or layer.mod_x
       layer.mod_y = replacement.mod_y or layer.mod_y
+      layer.replaces_same_type = true
     end
     local safe_center = (self.config.SAFE_TENSION_MIN + self.config.SAFE_TENSION_MAX) * 0.5
     local safe_span = (self.config.SAFE_TENSION_MAX - self.config.SAFE_TENSION_MIN) * 0.5

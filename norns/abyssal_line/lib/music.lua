@@ -11,7 +11,9 @@ local loop_state = {}
 local TIMBRE_FAMILIES = 8
 local CAPTURE_HANDOFF_STEPS = 24
 local FREE_FADE_STEPS = 18
-local REPLACE_FADE_STEPS = 28
+local REPLACE_FADE_STEPS = 8
+local REPLACE_FADEIN_STEPS = 12
+local REPLACE_CROSSFADE_STEPS = 2
 local MOTION_MOD_SCALE = {
   square = { x = 0.16, y = 0.10 },
   circle = { x = 0.12, y = 0.08 },
@@ -678,6 +680,16 @@ function Music.capture_loop(event)
   end
 
   local loop_key = layer.loop_key or string.format("%s:%s", fish_type, tostring(layer.pattern_seed or fish.pattern_seed or 1))
+  local is_replacement = layer.replaces_same_type == true
+  if is_replacement then
+    for key, existing in pairs(loop_state) do
+      if key ~= loop_key and existing.type == fish_type and existing.fadeout_steps then
+        existing.fadeout_steps = math.min(existing.fadeout_steps, REPLACE_CROSSFADE_STEPS)
+        existing.fadeout_total_steps = math.max(existing.fadeout_total_steps or REPLACE_FADE_STEPS, REPLACE_FADE_STEPS)
+      end
+    end
+  end
+
   local motion_scale = MOTION_MOD_SCALE[fish_type] or { x = 0.10, y = 0.08 }
   local capture_motion_x = clamp((fish.motion_x or 0) * motion_scale.x, 0, 1)
   local capture_motion_y = clamp((fish.motion_y or 0) * motion_scale.y, 0, 1)
@@ -701,10 +713,10 @@ function Music.capture_loop(event)
     mod_y = layer.mod_y or 0.5,
     capture_motion_x = capture_motion_x,
     capture_motion_y = capture_motion_y,
-    handoff_steps = CAPTURE_HANDOFF_STEPS,
-    handoff_total_steps = CAPTURE_HANDOFF_STEPS,
+    handoff_steps = is_replacement and REPLACE_FADEIN_STEPS or CAPTURE_HANDOFF_STEPS,
+    handoff_total_steps = is_replacement and REPLACE_FADEIN_STEPS or CAPTURE_HANDOFF_STEPS,
     handoff_0_1 = 1,
-    capture_amp_scale = layer.capture_amp_scale or 1.2,
+    capture_amp_scale = is_replacement and 0.06 or (layer.capture_amp_scale or 1.2),
     loop_amp = clamp((layer.avg_tension or 0.4) * 0.35 + (layer.max_tension or 0.5) * 0.25, 0, 0.55),
   }
 end
