@@ -1,11 +1,15 @@
 -- Bait & Beat
 --
--- A fishing game for Norns by Echoes from the Shield.
+-- A fishing game
+-- for Norns.
+-- By Echoes from
+-- the Shield.
 --
--- E1 page: sea, caught fish, music settings
--- E2 select row/action
--- E3 line, tension, or selected value
--- K3 cast, hook, select, or back
+-- E1 pages
+-- K3 cast/hook
+-- E3 line/tension
+-- P2 caught fish
+-- P3 music settings
 
 engine.name = "BaitAndBeat"
 
@@ -18,7 +22,7 @@ local Render = include("bait_and_beat/lib/render")
 local game = nil
 local genesis = nil
 local redraw_dirty = true
-local display_page = 0
+local display_page = 1
 local observed_state = nil
 local ui = {
   mode = "list",
@@ -42,16 +46,6 @@ end
 
 local function wrap_index(value, max)
   return ((value - 1) % max) + 1
-end
-
-local function dismiss_instructions()
-  if display_page == 0 then
-    display_page = 1
-    redraw_dirty = true
-    return true
-  end
-
-  return false
 end
 
 local function norns_fallback_controls()
@@ -189,20 +183,12 @@ end
 local genesis_input = {}
 
 function genesis_input:encoder(delta)
-  if dismiss_instructions() then
-    return
-  end
-
   if not handle_settings_encoder(3, delta) and not handle_ui_encoder(3, delta) then
     game:encoder(delta)
   end
 end
 
 function genesis_input:press()
-  if dismiss_instructions() then
-    return
-  end
-
   if not handle_settings_press() and not handle_ui_press() then
     game:press()
     update_display_page_from_state()
@@ -260,10 +246,6 @@ function cleanup()
 end
 
 function enc(n, delta)
-  if dismiss_instructions() then
-    return
-  end
-
   if n == 1 and game then
     if game.state == "STRUGGLE" then
       display_page = 2
@@ -288,10 +270,6 @@ function enc(n, delta)
 end
 
 function key(n, z)
-  if z == 1 and dismiss_instructions() then
-    return
-  end
-
   if n == 3 and z == 1 and (handle_settings_press() or handle_ui_press()) then
     return
   end

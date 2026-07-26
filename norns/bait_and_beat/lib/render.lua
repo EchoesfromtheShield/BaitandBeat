@@ -162,14 +162,25 @@ local function draw_sky(surface_y, frame)
   }
 
   if surface_y > 11 then
+    local moon = {
+      "..###..",
+      ".####..",
+      "####...",
+      "###....",
+      "###....",
+      ".###...",
+      "..###..",
+      "...##..",
+    }
+
     screen.level(9)
-    screen.rect(17, 5, 2, 1)
-    screen.rect(16, 6, 1, 1)
-    screen.rect(16, 7, 1, 1)
-    screen.rect(17, 8, 2, 1)
-    screen.fill()
-    screen.level(0)
-    screen.rect(18, 6, 1, 2)
+    for row_index, row in ipairs(moon) do
+      for column = 1, #row do
+        if row:sub(column, column) == "#" then
+          screen.rect(14 + column, 3 + row_index, 1, 1)
+        end
+      end
+    end
     screen.fill()
   end
 
@@ -679,28 +690,6 @@ local function draw_settings_page(game, ui)
   screen.text(scale and scale.name or "Pentatonic Minor")
 end
 
-local function draw_instructions_page()
-  screen.level(15)
-  screen.move(2, 8)
-  screen.text("BAIT & BEAT")
-
-  screen.level(8)
-  screen.move(2, 18)
-  screen.text("A fishing game for Norns")
-  screen.move(2, 27)
-  screen.text("by Echoes from")
-  screen.move(2, 36)
-  screen.text("the Shield.")
-
-  screen.level(6)
-  screen.move(2, 47)
-  screen.text("P1 K3 cast E3 line")
-  screen.move(2, 56)
-  screen.text("P2 E3 fish E2 mode")
-  screen.move(2, 63)
-  screen.text("P3 E2 row E3 set")
-end
-
 function Render.redraw(game, drone, genesis, page, ui)
   if screen == nil then
     return
@@ -710,9 +699,7 @@ function Render.redraw(game, drone, genesis, page, ui)
 
   render_frame = render_frame + 1
 
-  if page == 0 then
-    draw_instructions_page()
-  elseif page == 2 and game.state == "STRUGGLE" then
+  if page == 2 and game.state == "STRUGGLE" then
     draw_struggle_page(game)
   elseif page == 2 then
     draw_loop_ui_page(game, ui)
