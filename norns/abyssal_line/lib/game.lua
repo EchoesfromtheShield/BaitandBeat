@@ -14,14 +14,15 @@ local CAPTURE_LIMITS = {
 }
 
 local PULL_PATTERN = {
-  { name = "rest", duration = 1.45, pull = 0.00 },
-  { name = "small_tug", duration = 0.24, pull = 0.34 },
-  { name = "rest", duration = 1.10, pull = 0.00 },
-  { name = "long_pull", duration = 0.90, pull = 0.48 },
-  { name = "rest", duration = 1.30, pull = 0.00 },
-  { name = "vibration", duration = 0.18, pull = 0.28 },
-  { name = "vibration", duration = 0.18, pull = 0.36 },
-  { name = "rest", duration = 1.25, pull = 0.00 },
+  { name = "rest", duration = 1.10, pull = 0.00, resistance = 0.0 },
+  { name = "small_tug", duration = 0.30, pull = 0.46, resistance = 0.35 },
+  { name = "rest", duration = 0.85, pull = 0.00, resistance = 0.0 },
+  { name = "long_pull", duration = 1.05, pull = 0.74, resistance = 0.78 },
+  { name = "rest", duration = 0.95, pull = 0.00, resistance = 0.0 },
+  { name = "vibration", duration = 0.22, pull = 0.48, resistance = 0.45 },
+  { name = "vibration", duration = 0.22, pull = 0.62, resistance = 0.60 },
+  { name = "hard_drag", duration = 0.72, pull = 0.82, resistance = 1.00 },
+  { name = "rest", duration = 1.15, pull = 0.00, resistance = 0.0 },
 }
 
 local function clamp(value, lo, hi)
@@ -111,6 +112,7 @@ function Game.new(config)
     capture_progress = 0.0,
     tension_control = 0.46,
     fish_pull_tension = 0,
+    struggle_resistance = 1,
     message = "",
     message_timer = 0,
     captured_by_type = {},
@@ -286,8 +288,10 @@ function Game:encoder(delta)
   end
 
   if self.state == "STRUGGLE" then
+    local resistance = math.max(1, self.struggle_resistance or 1)
     self.tension_control = clamp(
-      (self.tension_control or self.tension or 0.46) + delta * (self.config.STRUGGLE_TENSION_STEP or 0.045),
+      (self.tension_control or self.tension or 0.46)
+        + delta * (self.config.STRUGGLE_TENSION_STEP or 0.045) / resistance,
       0,
       1
     )
@@ -348,6 +352,7 @@ function Game:press()
     self.capture_progress = 0
     self.tension_control = (self.config.SAFE_TENSION_MIN + self.config.SAFE_TENSION_MAX) * 0.5
     self.fish_pull_tension = 0
+    self.struggle_resistance = 1
     self.tension = self.tension_control
     self.last_reason = "hooked"
     self:_focus_fish(fish)
@@ -378,6 +383,7 @@ function Game:reset_to_explore()
   self.capture_progress = 0
   self.tension_control = 0.46
   self.fish_pull_tension = 0
+  self.struggle_resistance = 1
 end
 
 function Game:_return_to_cast(reason)
@@ -401,6 +407,7 @@ function Game:_return_to_cast(reason)
   self.capture_progress = 0
   self.tension_control = 0.46
   self.fish_pull_tension = 0
+  self.struggle_resistance = 1
   self.last_reason = reason
 end
 
@@ -425,6 +432,7 @@ function Game:_return_to_surface(reason)
   self.capture_progress = 0
   self.tension_control = 0.46
   self.fish_pull_tension = 0
+  self.struggle_resistance = 1
   self.last_reason = reason
 end
 
@@ -579,6 +587,9 @@ function Game:_update_struggle(dt, events)
   local pull_target = item.pull * (self.config.STRUGGLE_PULL_TENSION or 0.28)
   self.fish_pull_tension = (self.fish_pull_tension or 0)
     + (pull_target - (self.fish_pull_tension or 0)) * (self.config.STRUGGLE_PULL_SLEW or 0.08)
+  local resistance_target = 1 + (item.resistance or 0) * (self.config.STRUGGLE_ENCODER_RESISTANCE or 4.2)
+  self.struggle_resistance = (self.struggle_resistance or 1)
+    + (resistance_target - (self.struggle_resistance or 1)) * 0.10
   self.tension = clamp(
     (self.tension_control or 0.46)
       + (self.fish_pull_tension or 0),
@@ -593,6 +604,12 @@ function Game:_update_struggle(dt, events)
       and self.tension <= self.config.SAFE_TENSION_MAX then
     self.capture_progress = clamp(
       self.capture_progress + dt * self.config.CAPTURE_RATE,
+      0,
+      1
+    )
+  else
+    self.capture_progress = clamp(
+      self.capture_progress - dt * (self.config.CAPTURE_DECAY_RATE or 0.045),
       0,
       1
     )

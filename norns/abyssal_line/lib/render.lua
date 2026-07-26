@@ -461,9 +461,9 @@ end
 
 local function draw_action_text(ui, y, has_layer)
   local actions = {
-    { label = "free", x = 35 },
-    { label = "mix", x = 67 },
-    { label = "mod", x = 92 },
+    { label = "free", x = 34, slash_x = 57 },
+    { label = "mix", x = 65, slash_x = 84 },
+    { label = "mod", x = 94 },
   }
 
   if not has_layer then
@@ -478,7 +478,7 @@ local function draw_action_text(ui, y, has_layer)
 
     if index < #actions then
       screen.level(3)
-      screen.move(action.x + 24, y)
+      screen.move(action.slash_x, y)
       screen.text("/")
     end
   end

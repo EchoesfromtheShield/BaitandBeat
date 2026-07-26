@@ -206,7 +206,7 @@ Engine_AbyssalLine : CroneEngine {
 			sig = LPF.ar(sig, Select.kr(safeMode, [6200, 7600, 5200, 9600, 6200]));
 			sig = Compander.ar(sig, sig, 0.42, 1, 0.38, 0.002, 0.075);
 			sig = sig.tanh;
-			sig = Limiter.ar(sig * amp.clip(0, 1.6) * life * Select.kr(safeMode, [1.72, 1.28, 1.18, 0.90, 0.58]), 0.88, 0.01);
+			sig = Limiter.ar(sig * amp.clip(0, 1.6) * life * Select.kr(safeMode, [2.12, 1.76, 1.55, 0.66, 0.58]), 0.88, 0.01);
 			stereo = Pan2.ar(sig, pan.clip(-1, 1));
 			drumVerb = FreeVerb2.ar(stereo[0], stereo[1], 0.04 + motionX * 0.46, 0.76, 0.34);
 			stereo = (stereo * (1 - (verbMix * 0.34))) + (drumVerb * verbMix * 0.62);
@@ -237,7 +237,7 @@ Engine_AbyssalLine : CroneEngine {
 			sig = HPF.ar(sig, 70);
 			sig = LPF.ar(sig, 10500);
 			sig = sig.tanh;
-			sig = Limiter.ar(sig * level * 1.02, 0.72, 0.006);
+			sig = Limiter.ar(sig * level * 0.74, 0.72, 0.006);
 			Out.ar(out, Pan2.ar(sig, pan.clip(-1, 1)));
 		}).add;
 
