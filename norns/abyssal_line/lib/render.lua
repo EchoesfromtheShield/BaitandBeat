@@ -3,6 +3,7 @@ local Render = {}
 local SCREEN_W = 128
 local SCREEN_H = 64
 local HORIZON_Y = 16
+local render_frame = 0
 
 local SPRITES = {
   square = {
@@ -128,19 +129,43 @@ local function draw_sprite(sprite, cx, cy, level)
   screen.fill()
 end
 
-local function draw_sky(surface_y)
+local function draw_sprite_scaled(sprite, cx, cy, level, scale)
+  local w = sprite_width(sprite) * scale
+  local h = #sprite * scale
+  local x0 = math.floor(cx - w * 0.5)
+  local y0 = math.floor(cy - h * 0.5)
+
+  screen.level(level)
+  for row_index, row in ipairs(sprite) do
+    for column = 1, #row do
+      if row:sub(column, column) == "#" then
+        screen.rect(
+          x0 + (column - 1) * scale,
+          y0 + (row_index - 1) * scale,
+          scale,
+          scale
+        )
+      end
+    end
+  end
+  screen.fill()
+end
+
+local function draw_sky(surface_y, frame)
   local stars = {
-    { 8, 7, 5 },
-    { 29, 2, 3 },
-    { 47, 9, 4 },
-    { 83, 5, 6 },
-    { 103, 11, 4 },
-    { 119, 8, 3 },
+    { 8, 7, 5, 0 },
+    { 29, 2, 3, 7 },
+    { 47, 9, 4, 12 },
+    { 83, 5, 6, 19 },
+    { 103, 11, 4, 27 },
+    { 119, 8, 3, 35 },
   }
 
   for _, star in ipairs(stars) do
     if star[2] < surface_y - 1 then
-      screen.level(star[3])
+      local phase = (frame + star[4]) % 48
+      local blink = phase < 6 and 5 or 0
+      screen.level(clamp(star[3] + blink, 2, 12))
       screen.rect(star[1], star[2], 1, 1)
       screen.fill()
     end
@@ -166,7 +191,7 @@ end
 local function draw_boat(surface_y, line_x)
   local y = math.floor(surface_y)
   local tip_x = math.floor(line_x)
-  local tip_y = y - 8
+  local tip_y = y - 7
 
   screen.level(12)
   screen.rect(59, y - 6, 10, 2)
@@ -186,10 +211,8 @@ local function draw_boat(surface_y, line_x)
   screen.rect(68, y + 2, 2, 5)
   screen.fill()
 
-  screen.level(15)
-  screen.move(73, y - 1)
-  screen.line(tip_x, tip_y)
-  screen.move(78, y)
+  screen.level(11)
+  screen.move(76, y - 1)
   screen.line(tip_x, tip_y)
   screen.stroke()
 
@@ -271,7 +294,7 @@ local function draw_main_page(game)
   end
 
   if surface_y > -12 and surface_y < SCREEN_H + 8 then
-    draw_sky(surface_y)
+    draw_sky(surface_y, render_frame)
     draw_sea_line(surface_y)
     line_start_y = draw_boat(surface_y, line_x)
   end
@@ -374,6 +397,62 @@ local function marked_bar(x, y, w, h, value, mark_min, mark_max)
   end
 end
 
+local function draw_struggle_page(game)
+  local fish = game.hooked_fish or game.active_fish
+  local zoom_x = clamp(64 + ((game.fish_x or 0.5) - 0.5) * 96, 27, 101)
+  local depth_delta = clamp((game.fish_depth or game.depth or 0) - (game.depth or 0), -0.18, 0.18)
+  local zoom_y = clamp(27 + depth_delta * 86, 20, 30)
+  local hook_x_pos = 64
+  local hook_y_pos = 22
+  local anchor_x = 64
+  local anchor_y = 3
+  local motion = clamp((fish and fish.motion_x or 0) + (fish and fish.motion_y or 0), 0, 1)
+  local line_level = 8 + math.floor(clamp(game.tension or 0, 0, 1) * 6)
+  local sprite = SPRITES[fish and fish.type or "square"] or SPRITES.square
+
+  screen.level(1)
+  for y = 4, 45, 7 do
+    for x = 1 + ((y * 5 + render_frame) % 17), SCREEN_W - 1, 19 do
+      screen.rect(x, y, 1, 1)
+    end
+  end
+  screen.fill()
+
+  screen.level(line_level)
+  screen.move(anchor_x, anchor_y)
+  screen.line(hook_x_pos, hook_y_pos)
+  screen.line(zoom_x, zoom_y)
+  screen.stroke()
+
+  screen.level(11)
+  screen.move(hook_x_pos, hook_y_pos - 5)
+  screen.line(hook_x_pos, hook_y_pos + 2)
+  screen.line(hook_x_pos + 4, hook_y_pos + 4)
+  screen.stroke()
+
+  if motion > 0.35 then
+    screen.level(3 + math.floor(motion * 4))
+    screen.move(zoom_x - 18, zoom_y - 9)
+    screen.line(zoom_x - 23, zoom_y - 6)
+    screen.move(zoom_x + 18, zoom_y + 8)
+    screen.line(zoom_x + 23, zoom_y + 5)
+    screen.stroke()
+  end
+
+  draw_sprite_scaled(sprite, zoom_x, zoom_y, 14, 2)
+
+  marked_bar(
+    6,
+    49,
+    116,
+    6,
+    game.tension or 0,
+    game.config.SAFE_TENSION_MIN,
+    game.config.SAFE_TENSION_MAX
+  )
+  marked_bar(6, 58, 116, 5, game.capture_progress or 0)
+end
+
 local function draw_hud_page(game, drone, genesis)
   local depth_m = math.floor((game.depth or 0) * (game.config.MAX_DEPTH_M or 420))
   local genesis_label = "fallback"
@@ -430,7 +509,11 @@ function Render.redraw(game, drone, genesis, page)
 
   screen.clear()
 
-  if page == 2 then
+  render_frame = render_frame + 1
+
+  if page == 2 and game.state == "STRUGGLE" then
+    draw_struggle_page(game)
+  elseif page == 2 then
     draw_hud_page(game, drone, genesis)
   else
     draw_main_page(game)
