@@ -176,17 +176,23 @@ local function draw_sky(surface_y, frame)
     local moon_scale = 2
     local moon_x = 16
     local moon_y = 2
+    local moon_clip_y = math.floor(surface_y)
 
     screen.level(9)
     for row_index, row in ipairs(moon) do
       for column = 1, #row do
         if row:sub(column, column) == "#" then
-          screen.rect(
-            moon_x + (column - 1) * moon_scale,
-            moon_y + (row_index - 1) * moon_scale,
-            moon_scale,
-            moon_scale
-          )
+          local x = moon_x + (column - 1) * moon_scale
+          local y = moon_y + (row_index - 1) * moon_scale
+          local h = math.min(moon_scale, moon_clip_y - y)
+          if h > 0 then
+            screen.rect(
+              x,
+              y,
+              moon_scale,
+              h
+            )
+          end
         end
       end
     end
