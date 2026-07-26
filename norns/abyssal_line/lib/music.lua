@@ -83,6 +83,18 @@ local function timbre(fish, salt)
 end
 
 local function movement_from_fish(fish)
+  if fish and fish.loop_key then
+    local y = clamp(fish.mod_y or 0.5, 0, 1)
+
+    if fish.type == "square" then
+      return y * 0.18, 0
+    elseif fish.type == "circle" then
+      return y * 0.22, y * 0.18
+    elseif fish.type == "triangle" then
+      return y * 0.35, 0
+    end
+  end
+
   local scale = MOTION_MOD_SCALE[fish and fish.type] or { x = 0.10, y = 0.08 }
   return clamp(fish and fish.motion_x or 0, 0, 1) * scale.x,
     clamp(fish and fish.motion_y or 0, 0, 1) * scale.y
@@ -139,12 +151,14 @@ local function square_step(fish, amp_scale)
   local dense_section = math.floor(seeded(fish.pattern_seed, 3) * 4)
   local sparse_section = (dense_section + 2 + math.floor(seeded(fish.pattern_seed, 4) * 2)) % 4
   local density = 0.46
+  local events_mod = clamp(fish.mod_x or 0.5, 0, 1)
 
   if section == dense_section then
     density = 0.88
   elseif section == sparse_section then
     density = 0.18
   end
+  density = clamp(density * (0.50 + events_mod * 1.15), 0.08, 0.98)
 
   local mode = nil
   if bar_step == 0 and seeded(fish.pattern_seed + math.floor(step16 / 16), 5) > density * 0.18 then
@@ -163,6 +177,13 @@ local function square_step(fish, amp_scale)
 
   if not mode then
     return
+  end
+
+  if mode ~= 0 then
+    local event_probability = clamp(0.22 + events_mod * 0.78, 0, 1)
+    if fish_step_seed(fish, 70 + bar_step) > event_probability then
+      return
+    end
   end
 
   local degree_offset = mode == 2 and ((phrase_step + section) % 4) or 0
@@ -244,6 +265,7 @@ end
 local function circle_step(fish, amp_scale)
   local subdivision = arp_subdivision(fish)
   local index = step16
+  local trigger_probability = clamp(0.35 + (fish.mod_x or 0.5) * 0.65, 0, 1)
 
   if subdivision == 0 then
     if step16 % 2 ~= 0 then
@@ -255,9 +277,15 @@ local function circle_step(fish, amp_scale)
   end
 
   local motion_x, motion_y = movement_from_fish(fish)
-  trigger_arp_note(fish, index, amp_scale, 1.0, 1.0, motion_x, motion_y)
+  if seeded(fish.pattern_seed + index * 31, 17) <= trigger_probability then
+    trigger_arp_note(fish, index, amp_scale, 1.0, 1.0, motion_x, motion_y)
+  end
 
   if subdivision == 2 then
+    if seeded(fish.pattern_seed + (index + 1) * 31, 17) > trigger_probability then
+      return
+    end
+
     local degree = arp_degree(fish, index + 1)
     local octave = choice(fish.timbre_seed, 15, { 1, 1, 1, 2 })
     local note = scale_hz(current_game, degree, octave)
@@ -280,12 +308,23 @@ local function triangle_step(fish, amp_scale)
     return
   end
 
-  local intervals = {
-    { 1, 3 },
-    { 1, 4 },
-    { 2, 5 },
-    { 3, 6 },
-  }
+  local harmony = clamp(fish.mod_x or 0.5, 0, 1)
+  local intervals = { { 4, 3 } }
+  if harmony >= 0.34 and harmony < 0.67 then
+    intervals = {
+      { 4, 3 },
+      { 3, 4 },
+      { 5, 5 },
+    }
+  elseif harmony >= 0.67 then
+    intervals = {
+      { 4, 3 },
+      { 3, 4 },
+      { 5, 5 },
+      { 6, 6 },
+      { 8, 7 },
+    }
+  end
   local pair = choice(fish.pattern_seed, 22 + math.floor(step16 / period), intervals)
   local degree = pair[1]
   local note = scale_hz(current_game, degree, 1)
@@ -353,7 +392,8 @@ end
 
 local function update_loops()
   for _, layer in pairs(loop_state) do
-    run_fish_step(layer, 0.62 + (layer.loop_amp or 0))
+    local volume = clamp(layer.volume_0_1 or 0.85, 0, 1)
+    run_fish_step(layer, (0.62 + (layer.loop_amp or 0)) * volume)
   end
 end
 
@@ -436,6 +476,19 @@ function Music.remove_loop_event(event)
   end
 end
 
+function Music.update_loop_event(event)
+  local layer = event.layer or {}
+  local key = event.loop_key or layer.loop_key
+
+  if not key or not loop_state[key] then
+    return
+  end
+
+  loop_state[key].volume_0_1 = layer.volume_0_1 or loop_state[key].volume_0_1
+  loop_state[key].mod_x = layer.mod_x or loop_state[key].mod_x
+  loop_state[key].mod_y = layer.mod_y or loop_state[key].mod_y
+end
+
 function Music.capture_loop(event)
   local layer = event.layer or {}
   local fish = event.fish or layer
@@ -457,6 +510,9 @@ function Music.capture_loop(event)
     motion_y = 0.06,
     pattern_seed = layer.pattern_seed or fish.pattern_seed or 1,
     timbre_seed = layer.timbre_seed or fish.timbre_seed or 1,
+    volume_0_1 = layer.volume_0_1 or 0.85,
+    mod_x = layer.mod_x or 0.5,
+    mod_y = layer.mod_y or 0.5,
     loop_amp = clamp((layer.avg_tension or 0.4) * 0.35 + (layer.max_tension or 0.5) * 0.25, 0, 0.55),
   }
 end
@@ -497,6 +553,8 @@ function Music.tick(game, events)
   for _, event in ipairs(events) do
     if event.type == "loop_removed" then
       Music.remove_loop_event(event)
+    elseif event.type == "loop_updated" then
+      Music.update_loop_event(event)
     elseif event.type == "surface" and event.name == "captured" then
       Music.capture_loop(event)
     end

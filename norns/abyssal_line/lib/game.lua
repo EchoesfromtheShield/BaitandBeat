@@ -144,6 +144,87 @@ function Game:_rebuild_captured_layers()
   end
 end
 
+function Game:captured_slots()
+  local slots = {}
+
+  for _, fish_type in ipairs(FISH_TYPES) do
+    local layers = self.captured_by_type[fish_type.type] or {}
+    table.insert(slots, {
+      type = fish_type.type,
+      slot = fish_type.slot,
+      layer = layers[1],
+    })
+  end
+
+  return slots
+end
+
+function Game:captured_layer(index)
+  local fish_type = FISH_TYPES[index]
+  if not fish_type then
+    return nil
+  end
+
+  local layers = self.captured_by_type[fish_type.type] or {}
+  return layers[1]
+end
+
+function Game:free_captured(index)
+  local fish_type = FISH_TYPES[index]
+  if not fish_type then
+    return false
+  end
+
+  local layers = self.captured_by_type[fish_type.type] or {}
+  local removed = table.remove(layers, 1)
+  self.captured_by_type[fish_type.type] = layers
+
+  if not removed then
+    return false
+  end
+
+  self:_rebuild_captured_layers()
+  self:_queue({
+    type = "loop_removed",
+    fish_type = fish_type.type,
+    slot = fish_type.slot,
+    loop_key = removed.loop_key,
+    layer = removed,
+  })
+  return true
+end
+
+function Game:set_captured_volume(index, volume)
+  local layer = self:captured_layer(index)
+  if not layer then
+    return false
+  end
+
+  layer.volume_0_1 = clamp(volume or layer.volume_0_1 or 0.85, 0, 1)
+  self:_queue({
+    type = "loop_updated",
+    loop_key = layer.loop_key,
+    layer = layer,
+  })
+  return true
+end
+
+function Game:set_captured_mod(index, x, y)
+  local layer = self:captured_layer(index)
+  if not layer then
+    return false
+  end
+
+  layer.mod_x = clamp(x or layer.mod_x or 0.5, 0, 1)
+  layer.mod_y = clamp(y or layer.mod_y or 0.5, 0, 1)
+  self:_queue({
+    type = "loop_updated",
+    loop_key = layer.loop_key,
+    layer = layer,
+  })
+  return true
+end
+
 function Game:_make_fish(def, depth)
   self.generation = self.generation + 1
   local pattern_seed = math.random(1000, 999999)
@@ -526,6 +607,9 @@ function Game:_update_struggle(dt, events)
       fight_time = self.fight_time,
       avg_tension = avg_tension,
       max_tension = self.fight_max_tension,
+      volume_0_1 = 0.85,
+      mod_x = 0.5,
+      mod_y = 0.5,
     }
 
     local layers = self.captured_by_type[fish.type] or {}

@@ -168,8 +168,8 @@ Engine_AbyssalLine : CroneEngine {
 			var arpBell = SinOsc.ar(freq * [1, 2.01, 3.97], 0, [0.14, 0.06, 0.025] * arpEnv).sum;
 			var interval = Select.kr((color * 3.999).floor, [1.189207, 1.33484, 1.498307, 1.681793]);
 			var arcAtk = 0.22 + (color * 0.48) + (motionX * 0.025);
-			var arcSus = 0.65 + (color * 0.95);
-			var arcRel = 0.42 + (color * 0.80);
+			var arcSus = 0.65 + (color * 0.95) + (motionX * 1.45);
+			var arcRel = 0.42 + (color * 0.80) + (motionX * 0.75);
 			var arcEnv = Env.linen(arcAtk, arcSus, arcRel, 1, -3).kr;
 			var arcCutoff = (freq * (2.0 + color * 4.0) * (1 + motionY * 0.20)).clip(260, 5200);
 			var arcCore = VarSaw.ar(

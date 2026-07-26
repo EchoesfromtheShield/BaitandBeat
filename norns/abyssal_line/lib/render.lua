@@ -400,6 +400,119 @@ local function marked_bar(x, y, w, h, value, mark_min, mark_max)
   end
 end
 
+local function captured_layer_for_type(game, fish_type)
+  local layers = game.captured_by_type and game.captured_by_type[fish_type] or {}
+  return layers[1]
+end
+
+local function draw_empty_slot(x, y, selected)
+  screen.level(selected and 8 or 2)
+  screen.rect(x - 8, y - 8, 16, 16)
+  screen.stroke()
+
+  screen.level(selected and 5 or 1)
+  screen.move(x - 4, y)
+  screen.line(x + 4, y)
+  screen.stroke()
+end
+
+local function draw_action_text(ui, y, has_layer)
+  local actions = {
+    { label = "free", x = 35 },
+    { label = "mix", x = 67 },
+    { label = "mod", x = 92 },
+  }
+
+  if not has_layer then
+    return
+  end
+
+  for index, action in ipairs(actions) do
+    local selected = (ui.action_index or 1) == index
+    screen.level(selected and 15 or 5)
+    screen.move(action.x, y)
+    screen.text(action.label)
+
+    if index < #actions then
+      screen.level(3)
+      screen.move(action.x + 24, y)
+      screen.text("/")
+    end
+  end
+end
+
+local function draw_captured_list_page(game, ui)
+  local rows = {
+    { type = "square", y = 11 },
+    { type = "circle", y = 32 },
+    { type = "triangle", y = 53 },
+  }
+  local selected_index = ui.selected_index or 1
+
+  for index, row in ipairs(rows) do
+    local layer = captured_layer_for_type(game, row.type)
+    local selected = selected_index == index
+    local sprite = SPRITES[row.type]
+
+    if layer then
+      draw_sprite(sprite, 14, row.y, selected and 15 or 7)
+    else
+      draw_empty_slot(14, row.y, selected)
+    end
+
+    if selected then
+      draw_action_text(ui, row.y + 3, layer ~= nil)
+    end
+  end
+end
+
+local function selected_layer(game, ui)
+  local rows = { "square", "circle", "triangle" }
+  return captured_layer_for_type(game, rows[ui.selected_index or 1])
+end
+
+local function draw_mix_page(game, ui)
+  local layer = selected_layer(game, ui)
+  local fish_type = layer and layer.type or "square"
+  local volume = layer and layer.volume_0_1 or 0
+  local sprite = SPRITES[fish_type] or SPRITES.square
+
+  if layer then
+    draw_sprite(sprite, 15, 18, 14)
+  else
+    draw_empty_slot(15, 18, true)
+  end
+
+  marked_bar(32, 29, 88, 8, volume)
+end
+
+local function draw_mod_page(game, ui)
+  local layer = selected_layer(game, ui)
+  local fish_type = layer and layer.type or "square"
+  local mod_x = layer and layer.mod_x or 0.5
+  local mod_y = layer and layer.mod_y or 0.5
+  local sprite = SPRITES[fish_type] or SPRITES.square
+  local x0 = 34
+  local y0 = 7
+  local w = 88
+  local h = 52
+  local x = x0 + 9 + clamp(mod_x, 0, 1) * (w - 18)
+  local y = y0 + 9 + (1 - clamp(mod_y, 0, 1)) * (h - 18)
+
+  screen.level(4)
+  screen.rect(x0, y0, w, h)
+  screen.stroke()
+
+  screen.level(3)
+  screen.move(x0, y0 + h * 0.5)
+  screen.line(x0 + w, y0 + h * 0.5)
+  screen.move(x0 + w * 0.5, y0)
+  screen.line(x0 + w * 0.5, y0 + h)
+  screen.stroke()
+
+  draw_sprite(sprite, x, y, layer and 15 or 5)
+end
+
 local function draw_struggle_page(game)
   local fish = game.hooked_fish or game.active_fish
   local zoom_x = clamp(64 + ((game.fish_x or 0.5) - 0.5) * 76, 20, 108)
@@ -456,56 +569,19 @@ local function draw_struggle_page(game)
   marked_bar(6, 58, 116, 5, game.capture_progress or 0)
 end
 
-local function draw_hud_page(game, drone, genesis)
-  local depth_m = math.floor((game.depth or 0) * (game.config.MAX_DEPTH_M or 420))
-  local genesis_label = "fallback"
+local function draw_loop_ui_page(game, ui)
+  ui = ui or {}
 
-  if genesis and genesis:is_connected() then
-    genesis_label = "genesis"
-  elseif genesis and genesis:is_open() then
-    genesis_label = "serial"
+  if ui.mode == "mix" then
+    draw_mix_page(game, ui)
+  elseif ui.mode == "mod" then
+    draw_mod_page(game, ui)
+  else
+    draw_captured_list_page(game, ui)
   end
-
-  screen.level(15)
-  screen.move(2, 8)
-  screen.text(game.state)
-
-  draw_loop_slots(game.captured_by_type, 8)
-
-  screen.level(9)
-  screen.move(2, 19)
-  screen.text(string.format("depth %03dm", depth_m))
-  marked_bar(58, 13, 66, 7, game.depth or 0)
-
-  screen.level(9)
-  screen.move(2, 31)
-  screen.text("signal")
-  marked_bar(58, 25, 66, 7, game.signal or 0)
-
-  screen.level(9)
-  screen.move(2, 43)
-  screen.text("tension")
-  marked_bar(
-    58,
-    37,
-    66,
-    7,
-    game.tension or 0,
-    game.config.SAFE_TENSION_MIN,
-    game.config.SAFE_TENSION_MAX
-  )
-
-  screen.level(9)
-  screen.move(2, 55)
-  screen.text("catch")
-
-  screen.level(5)
-  screen.move(2, 63)
-  screen.text(genesis_label)
-  marked_bar(58, 55, 66, 7, game.capture_progress or 0)
 end
 
-function Render.redraw(game, drone, genesis, page)
+function Render.redraw(game, drone, genesis, page, ui)
   if screen == nil then
     return
   end
@@ -517,7 +593,7 @@ function Render.redraw(game, drone, genesis, page)
   if page == 2 and game.state == "STRUGGLE" then
     draw_struggle_page(game)
   elseif page == 2 then
-    draw_hud_page(game, drone, genesis)
+    draw_loop_ui_page(game, ui)
   else
     draw_main_page(game)
   end
