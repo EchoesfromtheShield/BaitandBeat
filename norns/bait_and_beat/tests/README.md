@@ -7,7 +7,7 @@ useful as a basic state/transport smoke test:
 python tools\simulate_vertical_slice.py
 ```
 
-Then copy or sync `norns/abyssal_line` to Norns and test locally with `K3` and
+Then copy or sync `norns/bait_and_beat` to Norns and test locally with `K3` and
 `E3` while Genesis is disconnected.
 
 ## Genesis Serial Smoke Test

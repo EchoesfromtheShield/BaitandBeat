@@ -1,10 +1,19 @@
-engine.name = "AbyssalLine"
+-- Bait & Beat
+--
+-- A fishing game for Norns by Echoes from the Shield.
+--
+-- E1 page: sea, caught fish, music settings
+-- E2 select row/action
+-- E3 line, tension, or selected value
+-- K3 cast, hook, select, or back
 
-local Config = include("abyssal_line/lib/config")
-local Game = include("abyssal_line/lib/game")
-local GenesisSerial = include("abyssal_line/lib/genesis_serial")
-local Music = include("abyssal_line/lib/music")
-local Render = include("abyssal_line/lib/render")
+engine.name = "BaitAndBeat"
+
+local Config = include("bait_and_beat/lib/config")
+local Game = include("bait_and_beat/lib/game")
+local GenesisSerial = include("bait_and_beat/lib/genesis_serial")
+local Music = include("bait_and_beat/lib/music")
+local Render = include("bait_and_beat/lib/render")
 
 local game = nil
 local genesis = nil

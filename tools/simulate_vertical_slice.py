@@ -54,7 +54,7 @@ class Layer:
 
 
 @dataclass
-class AbyssalLineSim:
+class BaitAndBeatSim:
     mode: Mode = Mode.CAST
     now_s: float = 0.0
     line_depth: float = 0.0
@@ -254,7 +254,7 @@ class AbyssalLineSim:
         }
 
 
-def scripted_controller(sim: AbyssalLineSim) -> tuple[int, bool]:
+def scripted_controller(sim: BaitAndBeatSim) -> tuple[int, bool]:
     if sim.mode == Mode.CAST:
         return 0, sim.now_s < 0.2
 
@@ -278,7 +278,7 @@ def scripted_controller(sim: AbyssalLineSim) -> tuple[int, bool]:
 
 
 def main() -> None:
-    sim = AbyssalLineSim()
+    sim = BaitAndBeatSim()
     dt = 0.1
 
     for frame in range(900):

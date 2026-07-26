@@ -13,14 +13,14 @@ The separate LED button is the action input. The encoder press is unused in M0.
 ## Build
 
 ```powershell
-cd genesis\abyssal_line_controller
+cd genesis\bait_and_beat_controller
 python -m platformio run
 ```
 
 ## Upload To Current PC Port
 
 ```powershell
-cd genesis\abyssal_line_controller
+cd genesis\bait_and_beat_controller
 python -m platformio run -t upload
 ```
 
@@ -52,7 +52,7 @@ The Genesis side still does not own authoritative game state.
 If encoder, LED button, or vibration motor do not react, flash the probe env:
 
 ```powershell
-cd genesis\abyssal_line_controller
+cd genesis\bait_and_beat_controller
 python -m platformio run -e genesis_mini_pin_probe -t upload
 ```
 

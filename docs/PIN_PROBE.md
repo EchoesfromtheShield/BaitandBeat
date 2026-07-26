@@ -19,7 +19,7 @@ This identifies:
 Reconnect the Genesis Mini to the PC so it appears as `COM20`, then run:
 
 ```powershell
-cd genesis\abyssal_line_controller
+cd genesis\bait_and_beat_controller
 python -m platformio run -e genesis_mini_pin_probe -t upload
 ```
 
@@ -90,6 +90,6 @@ The expected useful lines look like:
 After the probe:
 
 ```powershell
-cd genesis\abyssal_line_controller
+cd genesis\bait_and_beat_controller
 python -m platformio run -e genesis_mini_m0_serial -t upload
 ```

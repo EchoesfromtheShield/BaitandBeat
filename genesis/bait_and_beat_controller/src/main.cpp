@@ -1,7 +1,7 @@
 #include <Arduino.h>
 #include "HardwareConfig.h"
 
-#if defined(ABYSSAL_LINE_PIN_PROBE)
+#if defined(BAIT_AND_BEAT_PIN_PROBE)
 
 namespace {
 
@@ -334,7 +334,7 @@ void sendEnvelope(const char* type, const String& payload) {
 }
 
 void sendHello() {
-  String payload = "{\"device_role\":\"genesis\",\"firmware\":\"abyssal-line-m0-serial\",";
+  String payload = "{\"device_role\":\"genesis\",\"firmware\":\"bait-and-beat-m0-serial\",";
   payload += "\"board\":\"genesis-mini-v1-rev2\",";
   payload += "\"motor_gpio\":";
   payload += HardwareConfig::VIBRATION_MOTOR_PIN;

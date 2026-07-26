@@ -99,7 +99,7 @@ function GenesisSerial:open()
   end
 
   self.last_error = nil
-  print("abyssal_line: genesis serial open " .. self.path)
+  print("bait_and_beat: genesis serial open " .. self.path)
   return true
 end
 

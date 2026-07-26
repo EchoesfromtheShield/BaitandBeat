@@ -1,4 +1,4 @@
-Engine_AbyssalLine : CroneEngine {
+Engine_BaitAndBeat : CroneEngine {
 	var drone;
 	var layers;
 
@@ -13,7 +13,7 @@ Engine_AbyssalLine : CroneEngine {
 	}
 
 	alloc {
-		SynthDef(\AbyssalDrone, {
+		SynthDef(\BaitBeatDrone, {
 			arg out = 0, root = 55, depth = 0, brightness = 0.5,
 				pressure = 0, signal = 0, fish = 0, amp = 0;
 
@@ -90,7 +90,7 @@ Engine_AbyssalLine : CroneEngine {
 			Out.ar(out, sig);
 		}).add;
 
-		SynthDef(\AbyssalStrike, {
+		SynthDef(\BaitBeatStrike, {
 			arg out = 0, kind = 0, note = 110, pull = 0, tension = 0, pan = 0;
 
 			var safeKind = kind.clip(0, 3);
@@ -122,7 +122,7 @@ Engine_AbyssalLine : CroneEngine {
 			Out.ar(out, Pan2.ar(sig, pan.clip(-1, 1)));
 		}).add;
 
-		SynthDef(\AbyssalFishEvent, {
+		SynthDef(\BaitBeatFishEvent, {
 			arg out = 0, mode = 0, note = 110, timbre = 0.5, amp = 0.7, pan = 0,
 				motion_x = 0, motion_y = 0;
 
@@ -213,7 +213,7 @@ Engine_AbyssalLine : CroneEngine {
 			Out.ar(out, stereo);
 		}).add;
 
-		SynthDef(\AbyssalArpEvent, {
+		SynthDef(\BaitBeatArpEvent, {
 			arg out = 0, note = 220, timbre = 0.5, amp = 0.6, pan = 0,
 				motion_x = 0, motion_y = 0;
 
@@ -241,7 +241,7 @@ Engine_AbyssalLine : CroneEngine {
 			Out.ar(out, Pan2.ar(sig, pan.clip(-1, 1)));
 		}).add;
 
-		SynthDef(\AbyssalLayer, {
+		SynthDef(\BaitBeatLayer, {
 			arg out = 0, gate = 1, layer = 0, root = 55, rate = 0.3,
 				texture = 0.4, amp = 0.1, pan = 0;
 
@@ -263,7 +263,7 @@ Engine_AbyssalLine : CroneEngine {
 		Server.default.sync;
 
 		layers = Array.fill(3, { nil });
-		drone = Synth(\AbyssalDrone, [\amp, 0]);
+		drone = Synth(\BaitBeatDrone, [\amp, 0]);
 
 		this.addCommand(\start, "", {
 			drone.set(\amp, 0);
@@ -286,7 +286,7 @@ Engine_AbyssalLine : CroneEngine {
 		});
 
 		this.addCommand(\strike, "iffff", { arg msg;
-			Synth(\AbyssalStrike, [
+			Synth(\BaitBeatStrike, [
 				\kind, msg[1].asInteger,
 				\note, msg[2].asFloat,
 				\pull, msg[3].asFloat,
@@ -299,7 +299,7 @@ Engine_AbyssalLine : CroneEngine {
 			var mode = msg[1].asInteger;
 
 			if(mode == 3, {
-				Synth(\AbyssalArpEvent, [
+				Synth(\BaitBeatArpEvent, [
 					\note, msg[2].asFloat,
 					\timbre, msg[3].asFloat,
 					\amp, msg[4].asFloat,
@@ -308,7 +308,7 @@ Engine_AbyssalLine : CroneEngine {
 					\motion_y, msg[7].asFloat
 				]);
 			}, {
-				Synth(\AbyssalFishEvent, [
+				Synth(\BaitBeatFishEvent, [
 					\mode, mode,
 					\note, msg[2].asFloat,
 					\timbre, msg[3].asFloat,
@@ -326,7 +326,7 @@ Engine_AbyssalLine : CroneEngine {
 				layers[index].set(\gate, 0);
 			});
 
-			layers[index] = Synth(\AbyssalLayer, [
+			layers[index] = Synth(\BaitBeatLayer, [
 				\layer, index,
 				\root, msg[2].asFloat,
 				\rate, msg[3].asFloat,

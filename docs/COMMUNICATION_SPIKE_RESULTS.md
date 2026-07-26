@@ -25,7 +25,7 @@ Connected modules:
 
 ## Firmware
 
-- Path: `genesis/abyssal_line_controller`
+- Path: `genesis/bait_and_beat_controller`
 - Environment: PlatformIO + Arduino
 - Board definition: local `boards/axiometa_genesis_mini.json`
 - Transport under test: USB CDC style serial line protocol at 115200 baud

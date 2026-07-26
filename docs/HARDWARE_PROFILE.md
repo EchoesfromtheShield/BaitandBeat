@@ -109,4 +109,4 @@ The communication spike has proved:
 
 Open hardware confirmations:
 
-- encoder, LED button, and ERM motor on the final Abyssal Line firmware.
+- encoder, LED button, and ERM motor on the final Bait & Beat firmware.
