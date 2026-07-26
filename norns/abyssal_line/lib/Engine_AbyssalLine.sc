@@ -211,6 +211,34 @@ Engine_AbyssalLine : CroneEngine {
 			Out.ar(out, stereo);
 		}).add;
 
+		SynthDef(\AbyssalArpEvent, {
+			arg out = 0, note = 220, timbre = 0.5, amp = 0.6, pan = 0,
+				motion_x = 0, motion_y = 0;
+
+			var freq = note.clip(40, 4200);
+			var color = timbre.clip(0, 1);
+			var open = motion_x.max(motion_y).clip(0, 1);
+			var rel = 0.045 + (color * 0.08) + (open * open * 0.72);
+			var atk = 0.002 + (open * 0.018);
+			var env = Env.perc(atk, rel, 1, -3).kr(doneAction: 2);
+			var width = (0.24 + (color * 0.30) + (open * 0.10)).clip(0.18, 0.62);
+			var cutoff = (freq * (2.4 + (color * 4.2) + (open * 13.5))).clip(360, 11800);
+			var rq = (0.24 - (open * 0.10) + (color * 0.05)).clip(0.11, 0.30);
+			var core = Pulse.ar(freq * [0.997, 1.003], width, 0.16).sum;
+			var octave = Pulse.ar(freq * 0.5, width * 0.85, 0.055);
+			var air = SinOsc.ar(freq * [2.001, 3.002], 0, [0.018, 0.010] * open).sum;
+			var sig = (core + octave + air) * env;
+			var level = amp.clip(0, 1.4) * (1 - (open * 0.26));
+
+			sig = RLPF.ar(sig, cutoff, rq);
+			sig = LeakDC.ar(sig);
+			sig = HPF.ar(sig, 70);
+			sig = LPF.ar(sig, 10500);
+			sig = sig.tanh;
+			sig = Limiter.ar(sig * level * 1.18, 0.72, 0.006);
+			Out.ar(out, Pan2.ar(sig, pan.clip(-1, 1)));
+		}).add;
+
 		SynthDef(\AbyssalLayer, {
 			arg out = 0, gate = 1, layer = 0, root = 55, rate = 0.3,
 				texture = 0.4, amp = 0.1, pan = 0;
@@ -266,15 +294,28 @@ Engine_AbyssalLine : CroneEngine {
 		});
 
 		this.addCommand(\fish_event, "ifffffff", { arg msg;
-			Synth(\AbyssalFishEvent, [
-				\mode, msg[1].asInteger,
-				\note, msg[2].asFloat,
-				\timbre, msg[3].asFloat,
-				\amp, msg[4].asFloat,
-				\pan, msg[5].asFloat,
-				\motion_x, msg[6].asFloat,
-				\motion_y, msg[7].asFloat
-			]);
+			var mode = msg[1].asInteger;
+
+			if(mode == 3, {
+				Synth(\AbyssalArpEvent, [
+					\note, msg[2].asFloat,
+					\timbre, msg[3].asFloat,
+					\amp, msg[4].asFloat,
+					\pan, msg[5].asFloat,
+					\motion_x, msg[6].asFloat,
+					\motion_y, msg[7].asFloat
+				]);
+			}, {
+				Synth(\AbyssalFishEvent, [
+					\mode, mode,
+					\note, msg[2].asFloat,
+					\timbre, msg[3].asFloat,
+					\amp, msg[4].asFloat,
+					\pan, msg[5].asFloat,
+					\motion_x, msg[6].asFloat,
+					\motion_y, msg[7].asFloat
+				]);
+			});
 		});
 
 		this.addCommand(\capture_layer, "ifffff", { arg msg;
