@@ -107,18 +107,20 @@ function Game.new(config)
     creature_depth = config.CREATURE_DEPTH,
     fish_depth = config.CREATURE_DEPTH,
     hooked_depth = config.CREATURE_DEPTH,
-    hook_x = 0.5,
+    hook_x = config.HOOK_X_0_1 or 0.5,
     fish_x = 0.5,
     depth_signal = 0.0,
     overlap_signal = 0.0,
     signal = 0.0,
     still_timer = 0.0,
     bite_ready = false,
+    bite_window_timer = 0.0,
     fight_time = 0.0,
     pattern_index = 0,
     tension = 0.0,
     slack_timer = 0.0,
     overload_timer = 0.0,
+    surface_timer = 0.0,
     fight_tension_sum = 0.0,
     fight_tension_samples = 0,
     fight_max_tension = 0.0,
@@ -259,6 +261,7 @@ function Game:press()
     fish.turn_timer = 0.15
     fish.burst_timer = 0
     self.bite_ready = false
+    self.bite_window_timer = 0
     self.captured_events = {}
     self.fight_tension_sum = 0
     self.fight_tension_samples = 0
@@ -270,7 +273,7 @@ function Game:press()
   end
 
   if self.state == "SURFACE" then
-    self:reset_to_explore()
+    self:_return_to_cast(self.last_reason)
   end
 end
 
@@ -282,6 +285,7 @@ function Game:reset_to_explore()
   self.overlap_signal = 0
   self.still_timer = 0
   self.bite_ready = false
+  self.bite_window_timer = 0
   self.fight_time = 0
   self.tension = 0
   self.slack_timer = 0
@@ -290,6 +294,50 @@ function Game:reset_to_explore()
   self.fight_tension_samples = 0
   self.fight_max_tension = 0
   self.capture_progress = 0
+end
+
+function Game:_return_to_cast(reason)
+  self.state = "CAST"
+  self.depth = 0
+  self.line_depth = 0
+  self.fish = {}
+  self.active_fish = nil
+  self.hooked_fish = nil
+  self.signal = 0
+  self.depth_signal = 0
+  self.overlap_signal = 0
+  self.still_timer = 0
+  self.bite_ready = false
+  self.bite_window_timer = 0
+  self.fight_time = 0
+  self.tension = 0
+  self.slack_timer = 0
+  self.overload_timer = 0
+  self.surface_timer = 0
+  self.capture_progress = 0
+  self.last_reason = reason
+end
+
+function Game:_return_to_surface(reason)
+  self.state = "SURFACE"
+  self.depth = 0
+  self.line_depth = 0
+  self.fish = {}
+  self.active_fish = nil
+  self.hooked_fish = nil
+  self.signal = 0
+  self.depth_signal = 0
+  self.overlap_signal = 0
+  self.still_timer = 0
+  self.bite_ready = false
+  self.bite_window_timer = 0
+  self.fight_time = 0
+  self.tension = 0
+  self.slack_timer = 0
+  self.overload_timer = 0
+  self.surface_timer = self.config.SURFACE_HOLD_S or 0.45
+  self.capture_progress = 0
+  self.last_reason = reason
 end
 
 function Game:_update_fish_swim(fish, dt, depth_signal, speed_scale)
@@ -352,6 +400,7 @@ function Game:_update_resonance(dt)
     self.active_fish = nil
     self.still_timer = 0
     self.bite_ready = false
+    self.bite_window_timer = 0
     self:_focus_fish(nil)
     return
   end
@@ -359,6 +408,7 @@ function Game:_update_resonance(dt)
   if self.active_fish ~= best then
     self.still_timer = 0
     self.bite_ready = false
+    self.bite_window_timer = 0
   end
 
   self.active_fish = best
@@ -372,13 +422,21 @@ function Game:_update_resonance(dt)
     self.still_timer = math.max(0, self.still_timer - dt * 2)
   end
 
-  self.bite_ready = self.still_timer >= self.config.BITE_HOLD_S
-    and best.overlap_signal >= 0.72
+  local bite_overlap_min = self.config.BITE_OVERLAP_MIN or 0.58
+  local bite_ready_now = self.still_timer >= self.config.BITE_HOLD_S
+    and best.overlap_signal >= bite_overlap_min
+
+  if bite_ready_now then
+    self.bite_window_timer = self.config.BITE_READY_WINDOW_S or 1.15
+  else
+    self.bite_window_timer = math.max(0, self.bite_window_timer - dt)
+  end
+
+  self.bite_ready = self.bite_window_timer > 0
 end
 
 function Game:_fail_to_explore(events, reason)
-  self.last_reason = reason
-  self:reset_to_explore()
+  self:_return_to_cast(reason)
   table.insert(events, { type = "failure", name = reason })
 end
 
@@ -455,9 +513,7 @@ function Game:_update_struggle(dt, events)
   end
 
   if self.overload_timer >= self.config.OVERLOAD_FAIL_S then
-    self.state = "CAST"
-    self.last_reason = "line_broken"
-    self.hooked_fish = nil
+    self:_return_to_cast("line_broken")
     table.insert(events, { type = "failure", name = "line_broken" })
     return
   end
@@ -484,9 +540,7 @@ function Game:_update_struggle(dt, events)
     table.insert(layers, layer)
     self.captured_by_type[fish.type] = layers
     self:_rebuild_captured_layers()
-    self.state = "SURFACE"
-    self.hooked_fish = nil
-    self.last_reason = "captured"
+    self:_return_to_surface("captured")
     table.insert(events, {
       type = "surface",
       name = "captured",
@@ -506,6 +560,11 @@ function Game:update(dt)
     self:_update_resonance(dt)
   elseif self.state == "STRUGGLE" then
     self:_update_struggle(dt, events)
+  elseif self.state == "SURFACE" then
+    self.surface_timer = math.max(0, self.surface_timer - dt)
+    if self.surface_timer <= 0 then
+      self:_return_to_cast(self.last_reason)
+    end
   end
 
   return events

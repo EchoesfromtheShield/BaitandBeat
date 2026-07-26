@@ -3,7 +3,6 @@ local Render = {}
 local SCREEN_W = 128
 local SCREEN_H = 64
 local HORIZON_Y = 16
-local HOOK_X = 64
 
 local SPRITES = {
   square = {
@@ -74,12 +73,34 @@ local function clamp(value, lo, hi)
   return value
 end
 
-local function depth_to_y(depth)
-  return HORIZON_Y + 4 + clamp(depth, 0, 1) * (SCREEN_H - HORIZON_Y - 8)
-end
-
 local function fish_to_x(value)
   return 10 + clamp(value, 0, 1) * 108
+end
+
+local function hook_x(game)
+  return fish_to_x(game.hook_x or game.config.HOOK_X_0_1 or 0.5)
+end
+
+local function camera_view(game)
+  local span = clamp(game.config.CAMERA_DEPTH_SPAN or 0.30, 0.12, 0.95)
+  if game.state == "CAST" or game.state == "SURFACE" then
+    return 0, span
+  end
+
+  local target = (game.depth or 0) - span * 0.42
+  return clamp(target, 0, 1 - span), span
+end
+
+local function view_top_y(view_top)
+  local scroll = clamp(view_top / 0.10, 0, 1)
+  return HORIZON_Y - scroll * (HORIZON_Y - 2)
+end
+
+local function world_to_y(depth, view_top, view_span)
+  local top = view_top_y(view_top)
+  local bottom = SCREEN_H - 3
+  local t = (depth - view_top) / view_span
+  return top + (bottom - top) * t
 end
 
 local function sprite_width(sprite)
@@ -107,7 +128,7 @@ local function draw_sprite(sprite, cx, cy, level)
   screen.fill()
 end
 
-local function draw_sky()
+local function draw_sky(surface_y)
   local stars = {
     { 8, 7, 5 },
     { 29, 2, 3 },
@@ -118,28 +139,34 @@ local function draw_sky()
   }
 
   for _, star in ipairs(stars) do
-    screen.level(star[3])
-    screen.rect(star[1], star[2], 1, 1)
-    screen.fill()
+    if star[2] < surface_y - 1 then
+      screen.level(star[3])
+      screen.rect(star[1], star[2], 1, 1)
+      screen.fill()
+    end
   end
 end
 
-local function draw_sea_line()
+local function draw_sea_line(y)
+  y = math.floor(y)
+
   screen.level(7)
-  screen.move(0, HORIZON_Y)
-  screen.line(SCREEN_W - 1, HORIZON_Y)
+  screen.move(0, y)
+  screen.line(SCREEN_W - 1, y)
   screen.stroke()
 
   screen.level(4)
   for x = 0, SCREEN_W - 1, 6 do
-    screen.rect(x, HORIZON_Y - 1, 1, 1)
-    screen.rect(x + 3, HORIZON_Y + 1, 1, 1)
+    screen.rect(x, y - 1, 1, 1)
+    screen.rect(x + 3, y - 2, 1, 1)
   end
   screen.fill()
 end
 
-local function draw_boat()
-  local y = HORIZON_Y
+local function draw_boat(surface_y, line_x)
+  local y = math.floor(surface_y)
+  local tip_x = math.floor(line_x)
+  local tip_y = y - 8
 
   screen.level(12)
   screen.rect(59, y - 6, 10, 2)
@@ -158,23 +185,51 @@ local function draw_boat()
   screen.rect(62, y + 2, 2, 5)
   screen.rect(68, y + 2, 2, 5)
   screen.fill()
+
+  screen.level(15)
+  screen.move(73, y - 1)
+  screen.line(tip_x, tip_y)
+  screen.move(78, y)
+  screen.line(tip_x, tip_y)
+  screen.stroke()
+
+  return tip_y
 end
 
-local function draw_bottom_noise()
+local function draw_water_noise(view_top, view_span)
+  screen.level(2)
+  for y = 6, SCREEN_H - 3, 9 do
+    local world_depth = clamp(view_top + (y / SCREEN_H) * view_span, 0, 1)
+    local spacing = 21 - math.floor(world_depth * 5)
+    local phase = math.floor(world_depth * 97 + y * 3) % spacing
+    for x = 2 + phase, SCREEN_W - 1, spacing do
+      screen.rect(x, y, 1, 1)
+    end
+  end
+  screen.fill()
+end
+
+local function draw_bottom_noise(bottom_y)
+  bottom_y = math.floor(bottom_y)
+
   screen.level(3)
   for x = 0, SCREEN_W - 1, 3 do
-    local y = 61 + ((x * 7) % 3)
-    screen.rect(x, y, 2, 1)
+    local y = bottom_y + ((x * 7) % 3)
+    if y >= 0 and y < SCREEN_H then
+      screen.rect(x, y, 2, 1)
+    end
   end
   screen.fill()
 
   screen.level(6)
-  screen.move(0, 63)
-  for x = 0, SCREEN_W - 1, 2 do
-    local y = 62 + ((x * 5) % 2)
-    screen.line(x, y)
+  if bottom_y >= 0 and bottom_y < SCREEN_H then
+    screen.move(0, bottom_y)
+    for x = 0, SCREEN_W - 1, 2 do
+      local y = bottom_y + ((x * 5) % 2)
+      screen.line(x, clamp(y, 0, SCREEN_H - 1))
+    end
+    screen.stroke()
   end
-  screen.stroke()
 end
 
 local function draw_hook(x, y, ready)
@@ -189,73 +244,76 @@ end
 
 local function draw_fish(fish, x, y, signal, ready)
   local sprite = SPRITES[fish and fish.type or "square"] or SPRITES.square
-  local level = 4 + math.floor(clamp(signal or 0, 0, 1) * 11)
-
-  if ready then
-    screen.level(9)
-    screen.circle(x, y, 9)
-    screen.stroke()
-    screen.level(4)
-    screen.circle(x, y, 13)
-    screen.stroke()
-  elseif signal and signal > 0.25 then
-    screen.level(3 + math.floor(signal * 4))
-    screen.circle(x, y, 5 + signal * 6)
-    screen.stroke()
-  end
+  local level = ready and 15 or (3 + math.floor(clamp(signal or 0, 0, 1) * 10))
 
   draw_sprite(sprite, x, y, level)
 end
 
-local function draw_line_to_hook(game, hook_y)
-  if game.state == "CAST" then
+local function draw_line_to_hook(game, line_x, start_y, hook_y)
+  if game.state == "CAST" or game.state == "SURFACE" then
     return
   end
 
   screen.level(9)
-  screen.move(HOOK_X, HORIZON_Y + 3)
-  screen.line(HOOK_X, hook_y)
+  screen.move(line_x, clamp(start_y, 0, SCREEN_H - 1))
+  screen.line(line_x, hook_y)
   screen.stroke()
 end
 
 local function draw_main_page(game)
-  draw_sky()
-  draw_sea_line()
-  draw_boat()
+  local line_x = hook_x(game)
+  local view_top, view_span = camera_view(game)
+  local surface_y = world_to_y(0, view_top, view_span)
+  local line_start_y = 0
 
-  if game.state == "CAST" then
+  if game.state ~= "CAST" and game.state ~= "SURFACE" then
+    draw_water_noise(view_top, view_span)
+  end
+
+  if surface_y > -12 and surface_y < SCREEN_H + 8 then
+    draw_sky(surface_y)
+    draw_sea_line(surface_y)
+    line_start_y = draw_boat(surface_y, line_x)
+  end
+
+  if game.state == "CAST" or game.state == "SURFACE" then
     return
   end
 
-  draw_bottom_noise()
+  local bottom_y = world_to_y(1, view_top, view_span)
+  if bottom_y >= 48 and bottom_y < SCREEN_H + 8 then
+    draw_bottom_noise(bottom_y)
+  end
 
-  local hook_y = clamp(depth_to_y(game.depth), HORIZON_Y + 5, SCREEN_H - 4)
+  local hook_y = clamp(world_to_y(game.depth, view_top, view_span), 1, SCREEN_H - 4)
 
   if game.state == "STRUGGLE" then
     local fish = game.hooked_fish or game.active_fish
-    local fish_y = clamp(depth_to_y(game.fish_depth), HORIZON_Y + 5, SCREEN_H - 6)
+    local fish_y = clamp(world_to_y(game.fish_depth, view_top, view_span), 1, SCREEN_H - 6)
     local fish_x = fish_to_x(game.fish_x)
 
-    draw_line_to_hook(game, hook_y)
+    draw_line_to_hook(game, line_x, line_start_y, hook_y)
     screen.level(8)
-    screen.move(HOOK_X, hook_y)
+    screen.move(line_x, hook_y)
     screen.line(fish_x, fish_y)
     screen.stroke()
-    draw_hook(HOOK_X, hook_y, false)
+    draw_hook(line_x, hook_y, false)
     draw_fish(fish, fish_x, fish_y, game.signal, false)
     return
   end
 
-  draw_line_to_hook(game, hook_y)
-  draw_hook(HOOK_X, hook_y, game.bite_ready)
+  draw_line_to_hook(game, line_x, line_start_y, hook_y)
+  draw_hook(line_x, hook_y, false)
 
   for _, fish in ipairs(game.fish or {}) do
     local signal = fish.signal or 0
-    if signal > 0.06 then
-      local fish_y = clamp(depth_to_y(fish.depth), HORIZON_Y + 6, SCREEN_H - 7)
+    local ready = game.bite_ready and game.active_fish == fish
+    if signal > 0.06 or ready then
+      local fish_y = world_to_y(fish.depth, view_top, view_span)
       local fish_x = fish_to_x(fish.x)
-      local ready = game.bite_ready and game.active_fish == fish
-      draw_fish(fish, fish_x, fish_y, signal, ready)
+      if fish_y >= -12 and fish_y <= SCREEN_H + 12 then
+        draw_fish(fish, fish_x, clamp(fish_y, 1, SCREEN_H - 4), signal, ready)
+      end
     end
   end
 end
