@@ -81,7 +81,8 @@ The active musical slice uses the Norns clock at 90 BPM. Each cast creates
 three seeded fish at different depths:
 
 - square: percussive kick/snare/rim loop;
-- circle: bright square-wave arpeggiator;
+- circle: bright square-wave arpeggiator with seeded 1/8, 1/16, or 1/32
+  subdivision;
 - triangle: slow harmony arcs.
 
 Captured loop limits are intentionally small:
