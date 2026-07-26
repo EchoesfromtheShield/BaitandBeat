@@ -160,12 +160,12 @@ Engine_AbyssalLine : CroneEngine {
 				(freq * (1.8 + color * 2.8)).clip(260, 4200),
 				rimDecay
 			);
-			var arpRel = 0.08 + (color * 0.24) + (motionX * 0.10);
+			var arpRel = 0.055 + (color * 0.14) + (motionX * 0.06);
 			var arpEnv = Env.perc(0.002 + color * 0.010, arpRel, 1, -4).kr;
-			var arpCutoff = (freq * (4.2 + color * 9.0) * (1 + motionY * 0.28)).clip(520, 8200);
-			var arpPulse = Pulse.ar(freq * [0.997, 1.003], 0.22 + color * 0.42, arpEnv * 0.24).sum;
-			var arpFm = SinOsc.ar(freq * 2.0, SinOsc.ar(freq * (3.0 + color * 5.0), 0, 0.8 + color * 1.4), arpEnv * 0.18);
-			var arpBell = SinOsc.ar(freq * [1, 2.01, 3.97], 0, [0.20, 0.10, 0.04] * arpEnv).sum;
+			var arpCutoff = (freq * (5.0 + color * 10.0) * (1 + motionY * 0.28)).clip(620, 10500);
+			var arpPulse = Pulse.ar(freq * [0.997, 1.003], 0.18 + color * 0.36, arpEnv * 0.32).sum;
+			var arpFm = SinOsc.ar(freq * 2.0, SinOsc.ar(freq * (3.0 + color * 5.0), 0, 0.8 + color * 1.4), arpEnv * 0.12);
+			var arpBell = SinOsc.ar(freq * [1, 2.01, 3.97], 0, [0.14, 0.06, 0.025] * arpEnv).sum;
 			var interval = Select.kr((color * 3.999).floor, [1.189207, 1.33484, 1.498307, 1.681793]);
 			var arcAtk = 0.22 + (color * 0.48) + (motionX * 0.025);
 			var arcSus = 0.65 + (color * 0.95);
@@ -191,7 +191,7 @@ Engine_AbyssalLine : CroneEngine {
 			var stereo;
 			var drumVerb;
 
-			arp = (arpPulse * (0.70 - color * 0.20)) + (arpFm * (0.18 + color * 0.30)) + (arpBell * (color * 0.42));
+			arp = (arpPulse * (0.88 - color * 0.18)) + (arpFm * (0.10 + color * 0.18)) + (arpBell * (color * 0.24));
 			arp = RLPF.ar(arp, arpCutoff, (0.14 + color * 0.14 - motionY * 0.010).clip(0.11, 0.32));
 			arc = RLPF.ar(arcCore + arcAir, arcCutoff, (0.22 - motionY * 0.010).clip(0.16, 0.30));
 			sig = Select.ar(safeMode, [kick, snare, rim, arp, arc]);
@@ -203,7 +203,7 @@ Engine_AbyssalLine : CroneEngine {
 			sig = LPF.ar(sig, Select.kr(safeMode, [6200, 7600, 5200, 9600, 6200]));
 			sig = Compander.ar(sig, sig, 0.42, 1, 0.38, 0.002, 0.075);
 			sig = sig.tanh;
-			sig = Limiter.ar(sig * amp.clip(0, 1.6) * life * Select.kr(safeMode, [1.62, 0.92, 0.55, 0.90, 0.58]), 0.88, 0.01);
+			sig = Limiter.ar(sig * amp.clip(0, 1.6) * life * Select.kr(safeMode, [1.62, 0.92, 0.76, 1.02, 0.58]), 0.88, 0.01);
 			stereo = Pan2.ar(sig, pan.clip(-1, 1));
 			drumVerb = FreeVerb2.ar(stereo[0], stereo[1], 0.08 + motionX * 0.16, 0.72, 0.28);
 			stereo = (stereo * (1 - (verbMix * 0.18))) + (drumVerb * verbMix * 0.28);

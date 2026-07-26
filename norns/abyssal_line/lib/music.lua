@@ -168,7 +168,7 @@ local function square_step(fish, amp_scale)
   local degree_offset = mode == 2 and ((phrase_step + section) % 4) or 0
   local note = scale_hz(current_game, 1 + degree_offset, mode == 2 and 1 or 0)
   local accent = 0.72 + density * 0.38
-  local base_amp = 0.42
+  local base_amp = 0.52
   if mode == 0 then
     base_amp = 1.20
   elseif mode == 1 then
@@ -194,58 +194,43 @@ local function square_step(fish, amp_scale)
 end
 
 local function arp_degree(fish, index)
-  local mode = choice(fish.pattern_seed, 11, { "up", "down", "updown", "walk" })
-  local notes = { 1, 2, 3, 5, 6, 8 }
+  local patterns = {
+    { 1, 2, 3, 5, 6, 8, 10, 11, 13, 11, 10, 8, 6, 5, 3, 2 },
+    { 1, 3, 5, 8, 10, 13, 15, 13, 10, 8, 6, 5, 3, 5, 8, 10 },
+    { 1, 5, 8, 10, 13, 10, 8, 5, 3, 6, 10, 13, 17, 13, 10, 6 },
+    { 1, 2, 5, 6, 8, 10, 13, 15, 13, 10, 8, 6, 5, 3, 2, 1 },
+  }
+  local pattern = choice(fish.pattern_seed, 11, patterns)
+  local reverse = seeded(fish.pattern_seed, 12) > 0.76
+  local phase = math.floor(seeded(fish.pattern_seed, 13) * #pattern)
+  local pos = (index + phase) % #pattern
 
-  if mode == "down" then
-    return notes[#notes - (index % #notes)]
+  if reverse then
+    pos = (#pattern - 1) - pos
   end
 
-  if mode == "updown" then
-    local period = (#notes * 2) - 2
-    local pos = index % period
-    if pos >= #notes then
-      pos = period - pos
-    end
-    return notes[pos + 1]
-  end
-
-  if mode == "walk" then
-    local offset = math.floor(seeded(fish.pattern_seed + index * 19, 12) * #notes)
-    return notes[offset + 1]
-  end
-
-  return notes[(index % #notes) + 1]
+  return pattern[pos + 1]
 end
 
 local function circle_step(fish, amp_scale)
-  local subdivision = choice(fish.pattern_seed, 13, { 1, 1, 1, 2 })
-  if step16 % subdivision ~= 0 then
-    return
+  local index = step16
+  local degree = arp_degree(fish, index)
+  local octave = choice(fish.timbre_seed, 14, { 1, 1, 1, 2 })
+  local note = scale_hz(current_game, degree, octave)
+  local phrase_step = index % 16
+  local accent = 1.0
+  if phrase_step == 0 then
+    accent = 1.28
+  elseif phrase_step == 4 or phrase_step == 8 or phrase_step == 12 then
+    accent = 1.12
+  elseif phrase_step % 2 == 1 then
+    accent = 0.86
   end
 
-  local index = math.floor(step16 / subdivision)
-  local degree = arp_degree(fish, index)
-  local octave = choice(fish.timbre_seed, 14, { 1, 1, 2 })
-  local note = scale_hz(current_game, degree, octave)
-  local amp = 0.48 * (amp_scale or 1)
+  local amp = 0.50 * accent * (amp_scale or 1)
   local pan = pan_from_fish(fish)
   local motion_x, motion_y = movement_from_fish(fish)
   fish_event(3, note, timbre(fish, 15), amp, pan, motion_x, motion_y)
-
-  if fish_step_seed(fish, 50) < 0.42 then
-    local next_degree = arp_degree(fish, index + 1)
-    delayed_fish_event(
-      1 / 8,
-      3,
-      scale_hz(current_game, next_degree, octave),
-      timbre(fish, 51),
-      amp * 0.82,
-      pan * -0.45,
-      motion_x,
-      motion_y
-    )
-  end
 end
 
 local function triangle_step(fish, amp_scale)
