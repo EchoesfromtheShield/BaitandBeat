@@ -34,9 +34,46 @@ Config.SURFACE_HOLD_S = 0.45
 Config.MESSAGE_HOLD_S = 2.4
 
 Config.BPM = 90
-Config.ROOT_HZ = 73.416
+Config.NOTES = {
+  { name = "C", hz = 65.406 },
+  { name = "C#", hz = 69.296 },
+  { name = "D", hz = 73.416 },
+  { name = "D#", hz = 77.782 },
+  { name = "E", hz = 82.407 },
+  { name = "F", hz = 87.307 },
+  { name = "F#", hz = 92.499 },
+  { name = "G", hz = 97.999 },
+  { name = "G#", hz = 103.826 },
+  { name = "A", hz = 110.000 },
+  { name = "A#", hz = 116.541 },
+  { name = "B", hz = 123.471 },
+}
+Config.SCALES = {
+  { name = "Harmonic Minor", intervals = { 0, 2, 3, 5, 7, 8, 11 } },
+  { name = "Major", intervals = { 0, 2, 4, 5, 7, 9, 11 } },
+  { name = "Natural Minor", intervals = { 0, 2, 3, 5, 7, 8, 10 } },
+  { name = "Pentatonic Major", intervals = { 0, 2, 4, 7, 9 } },
+  { name = "Pentatonic Minor", intervals = { 0, 3, 5, 7, 10 } },
+  { name = "Dorian", intervals = { 0, 2, 3, 5, 7, 9, 10 } },
+  { name = "Phrygian", intervals = { 0, 1, 3, 5, 7, 8, 10 } },
+  { name = "Lydian", intervals = { 0, 2, 4, 6, 7, 9, 11 } },
+  { name = "Mixolydian", intervals = { 0, 2, 4, 5, 7, 9, 10 } },
+  { name = "Locrian", intervals = { 0, 1, 3, 5, 6, 8, 10 } },
+  { name = "Harmonic Major", intervals = { 0, 2, 4, 5, 7, 8, 11 } },
+  { name = "Diminished", intervals = { 0, 1, 3, 4, 6, 7, 9, 10 } },
+  { name = "Whole Tone", intervals = { 0, 2, 4, 6, 8, 10 } },
+  { name = "Hungarian Major", intervals = { 0, 3, 4, 6, 7, 9, 10 } },
+  { name = "Hungarian Minor", intervals = { 0, 2, 3, 6, 7, 8, 11 } },
+  { name = "Arabic", intervals = { 0, 2, 4, 5, 6, 8, 10 } },
+  { name = "Hirajoshi", intervals = { 0, 2, 3, 7, 8 } },
+  { name = "Egyptian", intervals = { 0, 2, 3, 6, 7 } },
+  { name = "Blues", intervals = { 0, 3, 5, 6, 7, 10 } },
+}
+Config.ROOT_NOTE_INDEX = 3
+Config.SCALE_INDEX = 5
+Config.ROOT_HZ = Config.NOTES[Config.ROOT_NOTE_INDEX].hz
 Config.BASE_DRONE_HZ = Config.ROOT_HZ
-Config.SCALE = { 0, 3, 5, 7, 10, 12, 15, 17, 19, 22 }
+Config.SCALE = Config.SCALES[Config.SCALE_INDEX].intervals
 
 Config.SERIAL_ENABLED = true
 Config.SERIAL_DEVICE = "/dev/ttyACM0"

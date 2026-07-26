@@ -250,6 +250,10 @@ local function set_clock_bpm(bpm)
   end
 end
 
+function Music.set_bpm(bpm)
+  set_clock_bpm(bpm)
+end
+
 local function square_step(fish, amp_scale)
   local variant = choice(fish.pattern_seed, 2, DRUM_VARIANTS)
   local phrase = variant.phrase or 64

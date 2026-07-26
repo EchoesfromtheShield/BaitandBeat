@@ -15,8 +15,10 @@ local ui = {
   mode = "list",
   selected_index = 1,
   action_index = 2,
+  settings_index = 1,
 }
 local ui_actions = { "free", "mix", "mod" }
+local settings_count = 3
 local update_display_page_from_state = nil
 
 local function clamp(value, lo, hi)
@@ -49,6 +51,10 @@ end
 
 local function ui_active()
   return game ~= nil and display_page == 2 and game.state ~= "STRUGGLE"
+end
+
+local function settings_active()
+  return game ~= nil and display_page == 3 and game.state ~= "STRUGGLE"
 end
 
 local function selected_layer()
@@ -95,6 +101,42 @@ local function handle_ui_encoder(n, delta)
   return false
 end
 
+local function apply_root_note(index)
+  Config.ROOT_NOTE_INDEX = wrap_index(index, #Config.NOTES)
+  Config.ROOT_HZ = Config.NOTES[Config.ROOT_NOTE_INDEX].hz
+  Config.BASE_DRONE_HZ = Config.ROOT_HZ
+end
+
+local function apply_scale(index)
+  Config.SCALE_INDEX = wrap_index(index, #Config.SCALES)
+  Config.SCALE = Config.SCALES[Config.SCALE_INDEX].intervals
+end
+
+local function handle_settings_encoder(n, delta)
+  if not settings_active() then
+    return false
+  end
+
+  if n == 2 then
+    ui.settings_index = wrap_index((ui.settings_index or 1) + delta, settings_count)
+    redraw_dirty = true
+    return true
+  elseif n == 3 then
+    if ui.settings_index == 1 then
+      Config.BPM = clamp(math.floor((Config.BPM or 90) + delta + 0.5), 40, 240)
+      Music.set_bpm(Config.BPM)
+    elseif ui.settings_index == 2 then
+      apply_root_note((Config.ROOT_NOTE_INDEX or 3) + delta)
+    elseif ui.settings_index == 3 then
+      apply_scale((Config.SCALE_INDEX or 5) + delta)
+    end
+    redraw_dirty = true
+    return true
+  end
+
+  return false
+end
+
 local function handle_ui_press()
   if not ui_active() then
     return false
@@ -125,6 +167,16 @@ local function handle_ui_press()
   return true
 end
 
+local function handle_settings_press()
+  if not settings_active() then
+    return false
+  end
+
+  display_page = 1
+  redraw_dirty = true
+  return true
+end
+
 local genesis_input = {}
 
 function genesis_input:encoder(delta)
@@ -132,7 +184,7 @@ function genesis_input:encoder(delta)
     return
   end
 
-  if not handle_ui_encoder(3, delta) then
+  if not handle_settings_encoder(3, delta) and not handle_ui_encoder(3, delta) then
     game:encoder(delta)
   end
 end
@@ -142,7 +194,7 @@ function genesis_input:press()
     return
   end
 
-  if not handle_ui_press() then
+  if not handle_settings_press() and not handle_ui_press() then
     game:press()
     update_display_page_from_state()
   end
@@ -204,17 +256,19 @@ function enc(n, delta)
   end
 
   if n == 1 and game then
-    if delta > 0 then
+    if game.state == "STRUGGLE" then
       display_page = 2
-    elseif delta < 0 then
-      display_page = 1
-      ui.mode = "list"
+    elseif delta ~= 0 then
+      display_page = wrap_index(display_page + delta, 3)
+      if display_page ~= 2 then
+        ui.mode = "list"
+      end
     end
     redraw_dirty = true
     return
   end
 
-  if handle_ui_encoder(n, delta) then
+  if handle_settings_encoder(n, delta) or handle_ui_encoder(n, delta) then
     return
   end
 
@@ -229,7 +283,7 @@ function key(n, z)
     return
   end
 
-  if n == 3 and z == 1 and handle_ui_press() then
+  if n == 3 and z == 1 and (handle_settings_press() or handle_ui_press()) then
     return
   end
 

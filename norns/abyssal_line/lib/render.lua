@@ -639,6 +639,46 @@ local function draw_loop_ui_page(game, ui)
   end
 end
 
+local function draw_settings_row(label, value, y, selected)
+  screen.level(selected and 15 or 5)
+  screen.move(7, y)
+  screen.text(label)
+  screen.move(46, y)
+  screen.text(value)
+
+  if selected then
+    screen.level(10)
+    screen.move(0, y)
+    screen.text(">")
+  end
+end
+
+local function draw_settings_page(game, ui)
+  local config = game.config or {}
+  local note = config.NOTES and config.NOTES[config.ROOT_NOTE_INDEX or 1] or nil
+  local scale = config.SCALES and config.SCALES[config.SCALE_INDEX or 1] or nil
+  local selected = ui and ui.settings_index or 1
+
+  screen.level(15)
+  screen.move(2, 8)
+  screen.text("MUSIC")
+
+  draw_settings_row("BPM", tostring(config.BPM or 90), 22, selected == 1)
+  draw_settings_row("ROOT", note and note.name or "D", 36, selected == 2)
+
+  screen.level(selected == 3 and 15 or 5)
+  screen.move(7, 50)
+  screen.text("SCALE")
+  if selected == 3 then
+    screen.level(10)
+    screen.move(0, 50)
+    screen.text(">")
+  end
+  screen.level(selected == 3 and 15 or 7)
+  screen.move(7, 61)
+  screen.text(scale and scale.name or "Pentatonic Minor")
+end
+
 local function draw_instructions_page()
   screen.level(15)
   screen.move(2, 8)
@@ -658,7 +698,7 @@ local function draw_instructions_page()
   screen.move(2, 56)
   screen.text("P2 E3 fish E2 mode")
   screen.move(2, 63)
-  screen.text("K3 select/back")
+  screen.text("P3 E2 row E3 set")
 end
 
 function Render.redraw(game, drone, genesis, page, ui)
@@ -676,6 +716,8 @@ function Render.redraw(game, drone, genesis, page, ui)
     draw_struggle_page(game)
   elseif page == 2 then
     draw_loop_ui_page(game, ui)
+  elseif page == 3 then
+    draw_settings_page(game, ui)
   else
     draw_main_page(game)
   end
