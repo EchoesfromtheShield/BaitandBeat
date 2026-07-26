@@ -153,20 +153,38 @@ end
 
 local function draw_sky(surface_y, frame)
   local stars = {
-    { 8, 7, 5, 0 },
-    { 29, 2, 3, 7 },
-    { 47, 9, 4, 12 },
-    { 83, 5, 6, 19 },
-    { 103, 11, 4, 27 },
-    { 119, 8, 3, 35 },
+    { 8, 7, 0 },
+    { 31, 3, 7 },
+    { 48, 10, 12 },
+    { 83, 5, 19 },
+    { 104, 12, 27 },
+    { 119, 8, 35 },
   }
+
+  if surface_y > 11 then
+    screen.level(9)
+    screen.rect(17, 5, 2, 1)
+    screen.rect(16, 6, 1, 1)
+    screen.rect(16, 7, 1, 1)
+    screen.rect(17, 8, 2, 1)
+    screen.fill()
+    screen.level(0)
+    screen.rect(18, 6, 1, 2)
+    screen.fill()
+  end
 
   for _, star in ipairs(stars) do
     if star[2] < surface_y - 1 then
-      local phase = (frame + star[4]) % 48
-      local blink = phase < 6 and 5 or 0
-      screen.level(clamp(star[3] + blink, 2, 12))
+      local phase = (frame + star[3]) % 42
+      local level = phase < 10 and 15 or (phase < 22 and 7 or 2)
+      screen.level(level)
       screen.rect(star[1], star[2], 1, 1)
+      if level > 6 then
+        screen.rect(star[1] - 1, star[2], 1, 1)
+        screen.rect(star[1] + 1, star[2], 1, 1)
+        screen.rect(star[1], star[2] - 1, 1, 1)
+        screen.rect(star[1], star[2] + 1, 1, 1)
+      end
       screen.fill()
     end
   end
@@ -205,11 +223,6 @@ local function draw_boat(surface_y, line_x)
   screen.line(56, y + 3)
   screen.line(51, y - 1)
   screen.stroke()
-
-  screen.level(8)
-  screen.rect(62, y + 2, 2, 5)
-  screen.rect(68, y + 2, 2, 5)
-  screen.fill()
 
   screen.level(11)
   screen.move(76, y - 1)

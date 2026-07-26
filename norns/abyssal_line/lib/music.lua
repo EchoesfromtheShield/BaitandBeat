@@ -181,7 +181,7 @@ local function movement_from_fish(fish)
     local y_motion = 0
 
     if fish.type == "square" then
-      x_motion = y * 0.18
+      x_motion = y
       y_motion = 0
     elseif fish.type == "circle" then
       x_motion = y
@@ -199,9 +199,7 @@ local function movement_from_fish(fish)
     return x_motion, y_motion
   end
 
-  local scale = MOTION_MOD_SCALE[fish and fish.type] or { x = 0.10, y = 0.08 }
-  return clamp(fish and fish.motion_x or 0, 0, 1) * scale.x,
-    clamp(fish and fish.motion_y or 0, 0, 1) * scale.y
+  return 0, 0
 end
 
 local function fish_event(mode, note, timbre_value, amp, pan, motion_x, motion_y)
@@ -299,11 +297,11 @@ local function square_step(fish, amp_scale)
   local degree_offset = mode == 2 and ((phrase_step + section) % 4) or 0
   local note = scale_hz(current_game, 1 + degree_offset, mode == 2 and 1 or 0)
   local accent = 0.72 + density * 0.38
-  local base_amp = 0.52
+  local base_amp = 0.70
   if mode == 0 then
-    base_amp = 1.20
+    base_amp = 1.32
   elseif mode == 1 then
-    base_amp = 0.62
+    base_amp = 0.92
   end
 
   local amp = base_amp * accent * (amp_scale or 1)
@@ -316,7 +314,7 @@ local function square_step(fish, amp_scale)
       2,
       scale_hz(current_game, 3 + (bar_step % 3), 1),
       drum_timbre(fish, variant, 2, bar_step + 17),
-      amp * 0.34,
+      amp * 0.46,
       pan_from_fish(fish) * -0.6,
       motion_x,
       motion_y
@@ -398,7 +396,7 @@ local function trigger_arp_note(fish, index, amp_scale, amp_mul, pan_mul, motion
   local degree = arp_degree(fish, index)
   local octave = choice(fish.timbre_seed, 15, { 1, 1, 1, 2 })
   local note = scale_hz(current_game, degree, octave)
-  local amp = 0.50 * arp_accent(index) * (amp_scale or 1) * (amp_mul or 1)
+  local amp = 0.42 * arp_accent(index) * (amp_scale or 1) * (amp_mul or 1)
   local pan = pan_from_fish(fish) * (pan_mul or 1)
 
   fish_event(3, note, timbre(fish, 15), amp, pan, motion_x, motion_y)
@@ -436,7 +434,7 @@ local function circle_step(fish, amp_scale)
       3,
       note,
       timbre(fish, 16),
-      0.50 * arp_accent(index + 1) * (amp_scale or 1) * 0.92,
+      0.40 * arp_accent(index + 1) * (amp_scale or 1) * 0.92,
       pan_from_fish(fish),
       motion_x,
       motion_y

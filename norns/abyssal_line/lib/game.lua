@@ -14,15 +14,14 @@ local CAPTURE_LIMITS = {
 }
 
 local PULL_PATTERN = {
-  { name = "rest", duration = 0.90, pull = 0.00 },
-  { name = "small_tug", duration = 0.18, pull = 0.42 },
-  { name = "rest", duration = 0.22, pull = 0.00 },
-  { name = "small_tug", duration = 0.18, pull = 0.36 },
-  { name = "long_pull", duration = 1.20, pull = 0.68 },
-  { name = "rest", duration = 0.70, pull = 0.00 },
-  { name = "vibration", duration = 0.12, pull = 0.34 },
-  { name = "vibration", duration = 0.12, pull = 0.50 },
-  { name = "vibration", duration = 0.12, pull = 0.28 },
+  { name = "rest", duration = 1.45, pull = 0.00 },
+  { name = "small_tug", duration = 0.24, pull = 0.34 },
+  { name = "rest", duration = 1.10, pull = 0.00 },
+  { name = "long_pull", duration = 0.90, pull = 0.48 },
+  { name = "rest", duration = 1.30, pull = 0.00 },
+  { name = "vibration", duration = 0.18, pull = 0.28 },
+  { name = "vibration", duration = 0.18, pull = 0.36 },
+  { name = "rest", duration = 1.25, pull = 0.00 },
 }
 
 local function clamp(value, lo, hi)
@@ -111,6 +110,7 @@ function Game.new(config)
     fight_max_tension = 0.0,
     capture_progress = 0.0,
     tension_control = 0.46,
+    fish_pull_tension = 0,
     message = "",
     message_timer = 0,
     captured_by_type = {},
@@ -347,6 +347,7 @@ function Game:press()
     self.fight_max_tension = 0
     self.capture_progress = 0
     self.tension_control = (self.config.SAFE_TENSION_MIN + self.config.SAFE_TENSION_MAX) * 0.5
+    self.fish_pull_tension = 0
     self.tension = self.tension_control
     self.last_reason = "hooked"
     self:_focus_fish(fish)
@@ -376,6 +377,7 @@ function Game:reset_to_explore()
   self.fight_max_tension = 0
   self.capture_progress = 0
   self.tension_control = 0.46
+  self.fish_pull_tension = 0
 end
 
 function Game:_return_to_cast(reason)
@@ -398,6 +400,7 @@ function Game:_return_to_cast(reason)
   self.surface_timer = 0
   self.capture_progress = 0
   self.tension_control = 0.46
+  self.fish_pull_tension = 0
   self.last_reason = reason
 end
 
@@ -421,6 +424,7 @@ function Game:_return_to_surface(reason)
   self.surface_timer = self.config.SURFACE_HOLD_S or 0.45
   self.capture_progress = 0
   self.tension_control = 0.46
+  self.fish_pull_tension = 0
   self.last_reason = reason
 end
 
@@ -572,11 +576,12 @@ function Game:_update_struggle(dt, events)
   fish.motion_x = clamp(math.abs(fish.x - previous_x) / math.max(dt * 0.42, 0.0001), 0, 1)
   fish.motion_y = clamp(math.abs(fish.fish_depth - previous_y) / math.max(dt * 0.18, 0.0001), 0, 1)
   self.fish_depth = fish.fish_depth
+  local pull_target = item.pull * (self.config.STRUGGLE_PULL_TENSION or 0.28)
+  self.fish_pull_tension = (self.fish_pull_tension or 0)
+    + (pull_target - (self.fish_pull_tension or 0)) * (self.config.STRUGGLE_PULL_SLEW or 0.08)
   self.tension = clamp(
     (self.tension_control or 0.46)
-      + item.pull * (self.config.STRUGGLE_PULL_TENSION or 0.34)
-      + fish.motion_x * 0.030
-      + fish.motion_y * 0.050,
+      + (self.fish_pull_tension or 0),
     0,
     1
   )
