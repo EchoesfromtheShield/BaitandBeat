@@ -9,6 +9,11 @@ local drone_send_t = 0
 local preview_latch = {}
 local loop_state = {}
 local TIMBRE_FAMILIES = 8
+local MOTION_MOD_SCALE = {
+  square = { x = 0.16, y = 0.10 },
+  circle = { x = 0.12, y = 0.08 },
+  triangle = { x = 0.08, y = 0.05 },
+}
 
 local function clamp(value, lo, hi)
   if value < lo then
@@ -78,8 +83,9 @@ local function timbre(fish, salt)
 end
 
 local function movement_from_fish(fish)
-  return clamp(fish and fish.motion_x or 0, 0, 1),
-    clamp(fish and fish.motion_y or 0, 0, 1)
+  local scale = MOTION_MOD_SCALE[fish and fish.type] or { x = 0.10, y = 0.08 }
+  return clamp(fish and fish.motion_x or 0, 0, 1) * scale.x,
+    clamp(fish and fish.motion_y or 0, 0, 1) * scale.y
 end
 
 local function fish_event(mode, note, timbre_value, amp, pan, motion_x, motion_y)

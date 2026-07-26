@@ -130,7 +130,7 @@ Engine_AbyssalLine : CroneEngine {
 			var motionX = motion_x.clip(0, 1);
 			var motionY = motion_y.clip(0, 1);
 			var isDrum = Select.kr(safeMode, [1, 1, 1, 0, 0]);
-			var kickDecay = 0.16 + (color * 0.24) + (motionX * 0.05);
+			var kickDecay = 0.16 + (color * 0.24) + (motionX * 0.015);
 			var kickEnv = Env.perc(0.001, kickDecay, 1, -6).kr;
 			var kickPitch = Env.perc(
 				0.001,
@@ -160,18 +160,18 @@ Engine_AbyssalLine : CroneEngine {
 				(freq * (2.2 + color * 5.0)).clip(300, 6200),
 				rimDecay
 			);
-			var arpRel = 0.08 + (color * 0.24) + (motionX * 0.34);
+			var arpRel = 0.08 + (color * 0.24) + (motionX * 0.10);
 			var arpEnv = Env.perc(0.002 + color * 0.010, arpRel, 1, -4).kr;
-			var arpCutoff = (freq * (4.2 + color * 9.0) * (1 + motionY * 1.35)).clip(520, 9600);
+			var arpCutoff = (freq * (4.2 + color * 9.0) * (1 + motionY * 0.28)).clip(520, 8200);
 			var arpPulse = Pulse.ar(freq * [0.997, 1.003], 0.22 + color * 0.42, arpEnv * 0.24).sum;
 			var arpFm = SinOsc.ar(freq * 2.0, SinOsc.ar(freq * (3.0 + color * 5.0), 0, 0.8 + color * 1.4), arpEnv * 0.18);
 			var arpBell = SinOsc.ar(freq * [1, 2.01, 3.97], 0, [0.20, 0.10, 0.04] * arpEnv).sum;
 			var interval = Select.kr((color * 3.999).floor, [1.189207, 1.33484, 1.498307, 1.681793]);
-			var arcAtk = 0.22 + (color * 0.48) + (motionX * 0.08);
+			var arcAtk = 0.22 + (color * 0.48) + (motionX * 0.025);
 			var arcSus = 0.65 + (color * 0.95);
 			var arcRel = 0.42 + (color * 0.80);
 			var arcEnv = Env.linen(arcAtk, arcSus, arcRel, 1, -3).kr;
-			var arcCutoff = (freq * (2.0 + color * 4.0) * (1 + motionY * 0.95)).clip(260, 6200);
+			var arcCutoff = (freq * (2.0 + color * 4.0) * (1 + motionY * 0.20)).clip(260, 5200);
 			var arcCore = VarSaw.ar(
 				freq * [0.5, 0.997, interval * 1.002],
 				0,
@@ -181,9 +181,9 @@ Engine_AbyssalLine : CroneEngine {
 			var arcAir = BPF.ar(PinkNoise.ar(arcEnv * 0.012), (freq * (5.0 + color * 3.0)).clip(800, 4800), 0.28);
 			var lifeRel = Select.kr(safeMode, [kickDecay + 0.08, snareDecay + 0.06, rimDecay + 0.04, arpRel + 0.08, arcAtk + arcSus + arcRel + 0.08]);
 			var life = Line.kr(1, 0, lifeRel, doneAction: 2);
-			var crushRate = motionY.linexp(0, 1, 22050, 7000);
-			var crushMix = motionY * motionY * isDrum * 0.28;
-			var verbMix = motionX * isDrum * 0.72;
+			var crushRate = motionY.linexp(0, 1, 22050, 13000);
+			var crushMix = motionY * motionY * isDrum * 0.06;
+			var verbMix = motionX * isDrum * 0.25;
 			var arp;
 			var arc;
 			var sig;
@@ -192,8 +192,8 @@ Engine_AbyssalLine : CroneEngine {
 			var drumVerb;
 
 			arp = (arpPulse * (0.70 - color * 0.20)) + (arpFm * (0.18 + color * 0.30)) + (arpBell * (color * 0.42));
-			arp = RLPF.ar(arp, arpCutoff, (0.14 + color * 0.14 - motionY * 0.035).clip(0.09, 0.32));
-			arc = RLPF.ar(arcCore + arcAir, arcCutoff, (0.22 - motionY * 0.035).clip(0.14, 0.30));
+			arp = RLPF.ar(arp, arpCutoff, (0.14 + color * 0.14 - motionY * 0.010).clip(0.11, 0.32));
+			arc = RLPF.ar(arcCore + arcAir, arcCutoff, (0.22 - motionY * 0.010).clip(0.16, 0.30));
 			sig = Select.ar(safeMode, [kick, snare, rim, arp, arc]);
 			crushed = Latch.ar(sig, Impulse.ar(crushRate));
 			sig = (sig * (1 - crushMix)) + (crushed * crushMix);
@@ -205,8 +205,8 @@ Engine_AbyssalLine : CroneEngine {
 			sig = sig.tanh;
 			sig = Limiter.ar(sig * amp.clip(0, 1.6) * life * Select.kr(safeMode, [1.45, 1.25, 1.05, 0.90, 0.58]), 0.88, 0.01);
 			stereo = Pan2.ar(sig, pan.clip(-1, 1));
-			drumVerb = FreeVerb2.ar(stereo[0], stereo[1], 0.08 + motionX * 0.48, 0.76, 0.32);
-			stereo = (stereo * (1 - (verbMix * 0.32))) + (drumVerb * verbMix * 0.46);
+			drumVerb = FreeVerb2.ar(stereo[0], stereo[1], 0.08 + motionX * 0.16, 0.72, 0.28);
+			stereo = (stereo * (1 - (verbMix * 0.18))) + (drumVerb * verbMix * 0.28);
 			Out.ar(out, stereo);
 		}).add;
 
