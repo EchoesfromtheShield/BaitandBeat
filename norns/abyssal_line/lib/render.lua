@@ -471,6 +471,12 @@ local function selected_layer(game, ui)
   return captured_layer_for_type(game, rows[ui.selected_index or 1])
 end
 
+local MOD_LABELS = {
+  square = { x = "X events", y = "Y verb" },
+  circle = { x = "X prob", y = "Y sus/cut" },
+  triangle = { x = "X harmony", y = "Y sustain" },
+}
+
 local function draw_mix_page(game, ui)
   local layer = selected_layer(game, ui)
   local fish_type = layer and layer.type or "square"
@@ -492,12 +498,19 @@ local function draw_mod_page(game, ui)
   local mod_x = layer and layer.mod_x or 0.5
   local mod_y = layer and layer.mod_y or 0.5
   local sprite = SPRITES[fish_type] or SPRITES.square
-  local x0 = 34
-  local y0 = 7
-  local w = 88
-  local h = 52
+  local labels = MOD_LABELS[fish_type] or MOD_LABELS.square
+  local w = 84
+  local h = 38
+  local x0 = math.floor((SCREEN_W - w) * 0.5)
+  local y0 = 16
   local x = x0 + 9 + clamp(mod_x, 0, 1) * (w - 18)
   local y = y0 + 9 + (1 - clamp(mod_y, 0, 1)) * (h - 18)
+
+  screen.level(8)
+  screen.move(2, 8)
+  screen.text(labels.y)
+  screen.move(70, 8)
+  screen.text(labels.x)
 
   screen.level(4)
   screen.rect(x0, y0, w, h)

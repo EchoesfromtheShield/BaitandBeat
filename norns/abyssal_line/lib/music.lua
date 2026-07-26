@@ -89,7 +89,7 @@ local function movement_from_fish(fish)
     if fish.type == "square" then
       return y * 0.18, 0
     elseif fish.type == "circle" then
-      return y * 0.22, y * 0.18
+      return y, y
     elseif fish.type == "triangle" then
       return y * 0.35, 0
     end
