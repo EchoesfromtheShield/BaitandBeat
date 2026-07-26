@@ -10,6 +10,10 @@ local game = nil
 local genesis = nil
 local redraw_dirty = true
 
+local function norns_fallback_controls()
+  return not (genesis and genesis:is_connected())
+end
+
 local function loop()
   while true do
     clock.sleep(Config.TICK_S)
@@ -41,14 +45,14 @@ function cleanup()
 end
 
 function enc(n, delta)
-  if n == 3 and game then
+  if n == 3 and game and norns_fallback_controls() then
     game:encoder(delta)
     redraw_dirty = true
   end
 end
 
 function key(n, z)
-  if n == 3 and z == 1 and game then
+  if n == 3 and z == 1 and game and norns_fallback_controls() then
     game:press()
     redraw_dirty = true
   end

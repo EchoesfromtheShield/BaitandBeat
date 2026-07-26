@@ -41,10 +41,12 @@ local function write_line(handle, line)
     return false
   end
 
-  handle:write(line)
-  handle:write("\n")
-  handle:flush()
-  return true
+  local ok = pcall(function()
+    handle:write(line)
+    handle:write("\n")
+    handle:flush()
+  end)
+  return ok
 end
 
 function GenesisSerial.new(config)
@@ -58,6 +60,8 @@ function GenesisSerial.new(config)
     connected = false,
     seq = 1,
     state_elapsed = 0,
+    rx_elapsed = 0,
+    rx_timeout_s = config.SERIAL_CONNECTION_TIMEOUT_S or 1.5,
     last_rx_type = nil,
     last_error = nil,
   }
@@ -115,6 +119,10 @@ function GenesisSerial:is_open()
   return self.reader ~= nil and self.writer ~= nil
 end
 
+function GenesisSerial:is_connected()
+  return self:is_open() and self.connected
+end
+
 function GenesisSerial:next_seq()
   local seq = self.seq
   self.seq = self.seq + 1
@@ -132,7 +140,12 @@ function GenesisSerial:send_raw(message_type, payload)
     message_type,
     payload or "{}"
   )
-  return write_line(self.writer, line)
+  local ok = write_line(self.writer, line)
+  if not ok then
+    self.connected = false
+    self.last_error = "write failed"
+  end
+  return ok
 end
 
 function GenesisSerial:send_hello_ack()
@@ -180,6 +193,7 @@ function GenesisSerial:handle_line(line, game)
   end
 
   self.last_rx_type = message_type
+  self.rx_elapsed = 0
 
   if message_type == "HELLO" then
     self.connected = true
@@ -187,7 +201,13 @@ function GenesisSerial:handle_line(line, game)
     return true
   end
 
+  if message_type == "DEBUG_RX" then
+    self.connected = true
+    return true
+  end
+
   if message_type == "INPUT_BUTTON" then
+    self.connected = true
     if read_string_field(line, "event") == "press" then
       game:press()
       return true
@@ -196,11 +216,13 @@ function GenesisSerial:handle_line(line, game)
   end
 
   if message_type == "INPUT_ENCODER_DELTA" then
+    self.connected = true
     game:encoder(read_number_field(line, "delta") or 0)
     return true
   end
 
   if message_type == "REQUEST_STATE" then
+    self.connected = true
     return true
   end
 
@@ -228,7 +250,16 @@ end
 
 function GenesisSerial:tick(dt, game, drone, events)
   if not self:is_open() then
+    self.connected = false
     return
+  end
+
+  if self.connected then
+    self.rx_elapsed = self.rx_elapsed + dt
+    if self.rx_elapsed >= self.rx_timeout_s then
+      self.connected = false
+      self.last_error = "rx timeout"
+    end
   end
 
   for _, event in ipairs(events) do

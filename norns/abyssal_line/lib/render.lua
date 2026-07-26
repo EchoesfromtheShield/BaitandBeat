@@ -263,7 +263,7 @@ function Render.redraw(game, drone, genesis)
   draw_loop_slots(game.captured_by_type)
 
   local genesis_label = "G --"
-  if genesis and genesis.connected then
+  if genesis and genesis:is_connected() then
     genesis_label = "G ok"
   elseif genesis and genesis:is_open() then
     genesis_label = "G io"

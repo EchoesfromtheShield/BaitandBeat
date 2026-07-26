@@ -8,7 +8,7 @@ python tools\simulate_vertical_slice.py
 ```
 
 Then copy or sync `norns/abyssal_line` to Norns and test locally with `K3` and
-`E3`.
+`E3` while Genesis is disconnected.
 
 ## Genesis Serial Smoke Test
 
@@ -35,7 +35,7 @@ Expected behavior:
 - Genesis motor pulses only when a bite becomes ready and when a capture
   reaches `SURFACE`.
 
-Fallback controls remain active:
+Fallback controls are active only when the display is not `G ok`:
 
 - `K3`: cast/hook/reset.
 - `E3`: line depth.

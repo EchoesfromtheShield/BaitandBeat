@@ -59,7 +59,8 @@ norns/abyssal_line/abyssal_line.lua
 The script now loads the custom `AbyssalLine` SuperCollider engine from
 `norns/abyssal_line/lib/Engine_AbyssalLine.sc`.
 
-The local Norns fallback controls are:
+The local Norns fallback controls are active only when Genesis is not connected
+or stops responding:
 
 - `K3`: cast or hook when the bite is ready.
 - `E3`: move the line depth.
@@ -73,7 +74,8 @@ When Genesis is connected to the Norns USB host it should appear as
 encoder/button input, and streams authoritative `GAME_STATE` and
 `PATTERN_EVENT` messages back to Genesis. The Norns screen shows `G --` when
 the serial device is missing, `G io` when the port is open, and `G ok` after
-the Genesis handshake.
+the Genesis handshake. When the display shows `G ok`, Genesis owns input and
+the local Norns fallback controls are ignored.
 
 The active musical slice uses the Norns clock at 90 BPM. Each cast creates
 three seeded fish at different depths:
