@@ -2,7 +2,7 @@ local Render = {}
 
 local SCREEN_W = 128
 local SCREEN_H = 64
-local HORIZON_Y = 16
+local HORIZON_Y = 24
 local render_frame = 0
 
 local SPRITES = {
