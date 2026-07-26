@@ -125,90 +125,65 @@ Engine_AbyssalLine : CroneEngine {
 				motion_x = 0, motion_y = 0;
 
 			var safeMode = mode.clip(0, 4);
-			var freq = note.clip(28, 5200);
-			var timbreLag = timbre.clip(0, 1);
+			var freq = note.clip(28, 3600);
+			var color = timbre.clip(0, 1);
 			var motionX = motion_x.clip(0, 1);
 			var motionY = motion_y.clip(0, 1);
 			var isDrum = Select.kr(safeMode, [1, 1, 1, 0, 0]);
-			var voiceFamily = (timbreLag * 7.999).floor;
-			var color = ((timbreLag * 8) - voiceFamily).clip(0, 1);
-			var drumFamily = voiceFamily;
-			var arpFamily = voiceFamily;
-			var arcFamily = voiceFamily;
-			var kickBase = Select.kr(drumFamily, [34, 40, 45, 52, 58, 66, 72, 86]);
-			var kickDecay = Select.kr(drumFamily, [0.16, 0.22, 0.30, 0.38, 0.48, 0.24, 0.34, 0.52]) + (motionX * 0.08);
+			var kickDecay = 0.16 + (color * 0.24) + (motionX * 0.05);
 			var kickEnv = Env.perc(0.001, kickDecay, 1, -6).kr;
 			var kickPitch = Env.perc(
 				0.001,
-				Select.kr(drumFamily, [0.032, 0.046, 0.060, 0.082, 0.115, 0.050, 0.075, 0.135]),
-				Select.kr(drumFamily, [34, 48, 64, 82, 118, 96, 142, 176]),
+				0.040 + (color * 0.055),
+				42 + (color * 82),
 				-7
 			).kr;
-			var kickClick = HPF.ar(ClipNoise.ar(Env.perc(0.001, 0.008 + color * 0.020).kr * (0.08 + color * 0.36)), 1100 + color * 4200);
-			var kickBody = Select.ar(
-				drumFamily,
-				[
-					SinOsc.ar(kickBase + kickPitch, 0, kickEnv * 1.35),
-					SinOsc.ar(kickBase + kickPitch, 0, kickEnv * 1.12) + LFTri.ar((kickBase + kickPitch) * 0.5, 0, kickEnv * 0.18),
-					SinOsc.ar(kickBase + kickPitch, 0, kickEnv * 0.92) + BPF.ar(ClipNoise.ar(kickEnv * 0.22), 900, 0.42),
-					LFTri.ar(kickBase + kickPitch, 0, kickEnv * 1.05),
-					Pulse.ar(kickBase + kickPitch, 0.42, kickEnv * 0.65),
-					SinOsc.ar(kickBase + kickPitch, 0, kickEnv * 0.88) + Ringz.ar(ClipNoise.ar(kickEnv * 0.08), kickBase * 2.8, 0.12),
-					SinOsc.ar(kickBase + kickPitch, 0, kickEnv * 0.70) + RLPF.ar(Saw.ar((kickBase + kickPitch) * 0.5, kickEnv * 0.22), 620, 0.2),
-					LFTri.ar(kickBase + kickPitch, 0, kickEnv * 0.86) + BPF.ar(ClipNoise.ar(kickEnv * 0.28), 2600, 0.18)
-				]
-			);
-			var kick = kickBody + kickClick;
-			var snareDecay = Select.kr(drumFamily, [0.11, 0.16, 0.22, 0.30, 0.40, 0.18, 0.26, 0.36]);
+			var kickBase = 36 + (color * 32);
+			var kickClick = HPF.ar(WhiteNoise.ar(Env.perc(0.001, 0.010).kr * (0.06 + color * 0.12)), 1800 + color * 2500);
+			var kick = SinOsc.ar(kickBase + kickPitch, 0, kickEnv * (1.0 + color * 0.28)) +
+				LFTri.ar((kickBase + kickPitch) * 0.5, 0, kickEnv * 0.10) +
+				kickClick;
+			var snareDecay = 0.12 + (color * 0.22);
 			var snareEnv = Env.perc(0.001, snareDecay, 1, -4).kr;
-			var snareTone = SinOsc.ar(Select.kr(drumFamily, [105, 145, 190, 245, 310, 370, 430, 520]), 0, snareEnv * (0.10 + color * 0.34));
+			var snareTone = SinOsc.ar(130 + (color * 280), 0, snareEnv * (0.12 + color * 0.20));
 			var snareNoise = BPF.ar(
-				WhiteNoise.ar(snareEnv * (0.58 + color * 0.90)),
-				Select.kr(drumFamily, [760, 1150, 1700, 2450, 3600, 5100, 2950, 980]),
-				Select.kr(drumFamily, [0.18, 0.26, 0.36, 0.52, 0.20, 0.14, 0.42, 0.30])
+				WhiteNoise.ar(snareEnv * (0.50 + color * 0.45)),
+				900 + (color * 3200),
+				0.22 + (color * 0.22)
 			);
-			var snareClap = HPF.ar(DelayC.ar(WhiteNoise.ar(snareEnv * 0.30), 0.035, Select.kr(drumFamily, [0.006, 0.010, 0.014, 0.018, 0.024, 0.030, 0.012, 0.020])), 1200);
+			var snareClap = HPF.ar(DelayC.ar(WhiteNoise.ar(snareEnv * 0.18), 0.022, 0.006 + color * 0.014), 1200);
 			var snare = snareNoise + snareTone + snareClap;
-			var rimDecay = Select.kr(drumFamily, [0.026, 0.040, 0.055, 0.074, 0.105, 0.135, 0.052, 0.088]);
+			var rimDecay = 0.030 + (color * 0.075);
 			var rimEnv = Env.perc(0.001, rimDecay, 1, -8).kr;
 			var rim = Ringz.ar(
-				ClipNoise.ar(rimEnv * (0.20 + color * 0.44)),
-				freq * Select.kr(drumFamily, [1.7, 2.4, 3.2, 4.5, 5.8, 7.2, 9.0, 11.0]),
+				HPF.ar(WhiteNoise.ar(rimEnv * (0.16 + color * 0.24)), 1200),
+				(freq * (2.2 + color * 5.0)).clip(300, 6200),
 				rimDecay
 			);
-			var arpRel = Select.kr(arpFamily, [0.07, 0.11, 0.16, 0.24, 0.34, 0.48, 0.19, 0.28]) + (motionX * 0.52);
+			var arpRel = 0.08 + (color * 0.24) + (motionX * 0.34);
 			var arpEnv = Env.perc(0.002 + color * 0.010, arpRel, 1, -4).kr;
-			var arpCutoff = (freq * Select.kr(arpFamily, [3.4, 5.4, 7.8, 10.5, 14.0, 18.0, 22.0, 8.6]) * (1 + motionY * 2.3)).clip(420, 15000);
-			var arpPulse = Pulse.ar(
-				freq * [0.996, 1.004],
-				Select.kr(arpFamily, [0.18, 0.25, 0.34, 0.45, 0.56, 0.68, 0.40, 0.52]),
-				arpEnv * 0.27
-			).sum;
-			var arpSaw = VarSaw.ar(freq * [0.992, 1.008], 0, 0.22 + color * 0.46, arpEnv * 0.20).sum;
-			var arpTri = LFTri.ar(freq * [0.5, 1.002, 2.01], 0, [0.10, 0.22, 0.08] * arpEnv).sum;
-			var arpSin = SinOsc.ar(freq * [1, 1.5, 2], 0, [0.23, 0.08, 0.05] * arpEnv).sum;
-			var arpFm = SinOsc.ar(freq * 2.0, SinOsc.ar(freq * (4.8 + color * 9.0), 0, 1.4 + color * 3.2), arpEnv * 0.28);
-			var arpBell = SinOsc.ar(freq * [1, 2.01, 3.97, 6.05], 0, [0.22, 0.13, 0.07, 0.035] * arpEnv).sum;
-			var arpClav = RHPF.ar(Pulse.ar(freq * [0.5, 1, 2.005], 0.22 + color * 0.25, arpEnv * [0.10, 0.23, 0.08]).sum, freq * 5.5, 0.35);
-			var interval = Select.kr(arcFamily, [1.122462, 1.189207, 1.259921, 1.33484, 1.498307, 1.681793, 1.781797, 2.0]);
-			var arcAtk = Select.kr(arcFamily, [0.18, 0.30, 0.46, 0.64, 0.82, 1.05, 0.54, 0.72]) + motionX * 0.16;
-			var arcSus = Select.kr(arcFamily, [0.70, 0.95, 1.25, 1.60, 2.05, 2.45, 1.85, 2.20]);
-			var arcRel = Select.kr(arcFamily, [0.45, 0.65, 0.92, 1.25, 1.60, 1.95, 2.30, 1.40]);
+			var arpCutoff = (freq * (4.2 + color * 9.0) * (1 + motionY * 1.35)).clip(520, 9600);
+			var arpPulse = Pulse.ar(freq * [0.997, 1.003], 0.22 + color * 0.42, arpEnv * 0.24).sum;
+			var arpFm = SinOsc.ar(freq * 2.0, SinOsc.ar(freq * (3.0 + color * 5.0), 0, 0.8 + color * 1.4), arpEnv * 0.18);
+			var arpBell = SinOsc.ar(freq * [1, 2.01, 3.97], 0, [0.20, 0.10, 0.04] * arpEnv).sum;
+			var interval = Select.kr((color * 3.999).floor, [1.189207, 1.33484, 1.498307, 1.681793]);
+			var arcAtk = 0.22 + (color * 0.48) + (motionX * 0.08);
+			var arcSus = 0.65 + (color * 0.95);
+			var arcRel = 0.42 + (color * 0.80);
 			var arcEnv = Env.linen(arcAtk, arcSus, arcRel, 1, -3).kr;
-			var arcCutoff = (freq * Select.kr(arcFamily, [1.7, 2.2, 3.1, 4.2, 5.8, 7.4, 9.2, 3.6]) * (1 + motionY * 1.9)).clip(240, 11000);
-			var arcA = LFTri.ar(freq * [0.5, 1, interval], 0, [0.12, 0.30, 0.22] * arcEnv).sum;
-			var arcB = VarSaw.ar(freq * [0.997, interval * 1.003], 0, 0.26 + color * 0.30, [0.32, 0.22] * arcEnv).sum;
-			var arcC = (Pulse.ar(freq * [1, interval], 0.44, [0.18, 0.14] * arcEnv).sum) + BPF.ar(WhiteNoise.ar(arcEnv * 0.045), freq * 8, 0.12);
-			var arcD = SinOsc.ar(freq * [1, 1.5, interval, 2], 0, [0.20, 0.08, 0.20, 0.05] * arcEnv).sum + Saw.ar(freq * 0.5, arcEnv * 0.055);
-			var arcE = RLPF.ar(Saw.ar(freq * [0.5, 0.997, interval * 1.002], [0.07, 0.20, 0.13] * arcEnv).sum, arcCutoff * 0.72, 0.20);
-			var arcF = SinOsc.ar(freq * [0.5, 1, interval, interval * 2], 0, [0.18, 0.20, 0.16, 0.06] * arcEnv).sum + CombC.ar(WhiteNoise.ar(arcEnv * 0.018), 0.08, (1 / freq).clip(0.001, 0.08), 0.7 + color);
-			var arcG = VarSaw.ar(freq * [1, 1.005, interval], 0, SinOsc.kr(4.0 + color * 3.0).range(0.28, 0.72), [0.16, 0.15, 0.13] * arcEnv).sum + BPF.ar(ClipNoise.ar(arcEnv * 0.030), 2400 + color * 2600, 0.22);
-			var arcH = LFTri.ar(freq * [0.5, 0.75, 1, interval], 0, [0.08, 0.07, 0.22, 0.18] * arcEnv).sum;
+			var arcCutoff = (freq * (2.0 + color * 4.0) * (1 + motionY * 0.95)).clip(260, 6200);
+			var arcCore = VarSaw.ar(
+				freq * [0.5, 0.997, interval * 1.002],
+				0,
+				SinOsc.kr(2.8 + color * 2.0).range(0.34, 0.62),
+				[0.08, 0.18, 0.12] * arcEnv
+			).sum;
+			var arcAir = BPF.ar(PinkNoise.ar(arcEnv * 0.012), (freq * (5.0 + color * 3.0)).clip(800, 4800), 0.28);
 			var lifeRel = Select.kr(safeMode, [kickDecay + 0.08, snareDecay + 0.06, rimDecay + 0.04, arpRel + 0.08, arcAtk + arcSus + arcRel + 0.08]);
 			var life = Line.kr(1, 0, lifeRel, doneAction: 2);
-			var crushRate = motionY.linexp(0, 1, 18000, 3800);
-			var crushMix = motionY * isDrum;
-			var verbMix = motionX * isDrum;
+			var crushRate = motionY.linexp(0, 1, 22050, 7000);
+			var crushMix = motionY * motionY * isDrum * 0.28;
+			var verbMix = motionX * isDrum * 0.72;
 			var arp;
 			var arc;
 			var sig;
@@ -216,19 +191,22 @@ Engine_AbyssalLine : CroneEngine {
 			var stereo;
 			var drumVerb;
 
-			arp = Select.ar(arpFamily, [arpPulse, arpSaw, arpTri, arpSin, arpFm, arpBell, arpClav, (arpPulse * 0.55) + (arpSaw * 0.42) + (arpFm * 0.36)]);
-			arp = RLPF.ar(arp, arpCutoff, (Select.kr(arpFamily, [0.10, 0.14, 0.22, 0.08, 0.18, 0.12, 0.30, 0.16]) - motionY * 0.045).clip(0.04, 0.45));
-			arc = Select.ar(arcFamily, [arcA, arcB, arcC, arcD, arcE, arcF, arcG, arcH]);
-			arc = RLPF.ar(arc, arcCutoff, (Select.kr(arcFamily, [0.16, 0.22, 0.34, 0.12, 0.20, 0.28, 0.18, 0.26]) - motionY * 0.06).clip(0.05, 0.60));
+			arp = (arpPulse * (0.70 - color * 0.20)) + (arpFm * (0.18 + color * 0.30)) + (arpBell * (color * 0.42));
+			arp = RLPF.ar(arp, arpCutoff, (0.14 + color * 0.14 - motionY * 0.035).clip(0.09, 0.32));
+			arc = RLPF.ar(arcCore + arcAir, arcCutoff, (0.22 - motionY * 0.035).clip(0.14, 0.30));
 			sig = Select.ar(safeMode, [kick, snare, rim, arp, arc]);
 			crushed = Latch.ar(sig, Impulse.ar(crushRate));
 			sig = (sig * (1 - crushMix)) + (crushed * crushMix);
 
 			sig = LeakDC.ar(sig);
-			sig = Limiter.ar(sig * amp.clip(0, 2.4) * life * 1.6, 0.95, 0.004);
+			sig = HPF.ar(sig, 24);
+			sig = LPF.ar(sig, Select.kr(safeMode, [9000, 9400, 8800, 9600, 6200]));
+			sig = Compander.ar(sig, sig, 0.42, 1, 0.38, 0.002, 0.075);
+			sig = sig.tanh;
+			sig = Limiter.ar(sig * amp.clip(0, 1.6) * life * Select.kr(safeMode, [1.45, 1.25, 1.05, 0.90, 0.58]), 0.88, 0.01);
 			stereo = Pan2.ar(sig, pan.clip(-1, 1));
 			drumVerb = FreeVerb2.ar(stereo[0], stereo[1], 0.08 + motionX * 0.48, 0.76, 0.32);
-			stereo = (stereo * (1 - (verbMix * 0.42))) + (drumVerb * verbMix * 0.62);
+			stereo = (stereo * (1 - (verbMix * 0.32))) + (drumVerb * verbMix * 0.46);
 			Out.ar(out, stereo);
 		}).add;
 

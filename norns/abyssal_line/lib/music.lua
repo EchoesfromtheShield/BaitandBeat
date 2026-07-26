@@ -255,7 +255,7 @@ local function triangle_step(fish, amp_scale)
     4,
     note,
     timbre(fish, pair[2]),
-    0.72 * (amp_scale or 1),
+    0.54 * (amp_scale or 1),
     pan_from_fish(fish),
     motion_x,
     motion_y
@@ -282,7 +282,7 @@ local function trigger_preview(fish)
   elseif fish.type == "circle" then
     fish_event(3, scale_hz(current_game, arp_degree(fish, 0), 1), timbre(fish, 32), 0.62, pan_from_fish(fish), 0, 0)
   elseif fish.type == "triangle" then
-    fish_event(4, scale_hz(current_game, 1, 1), timbre(fish, 31), 0.84, pan_from_fish(fish), 0, 0)
+    fish_event(4, scale_hz(current_game, 1, 1), timbre(fish, 31), 0.50, pan_from_fish(fish), 0, 0)
   end
 end
 
