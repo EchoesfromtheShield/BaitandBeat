@@ -163,27 +163,30 @@ local function draw_sky(surface_y, frame)
 
   if surface_y > 11 then
     local moon = {
-      "......#####..",
-      "....#######..",
-      "...########..",
-      "..########...",
-      ".#######.....",
-      ".#######.....",
-      "########.....",
-      "########.....",
-      ".#######.....",
-      ".#######.....",
-      "..########...",
-      "...########..",
-      "....#######..",
-      "......#####..",
+      "...#.....",
+      ".##......",
+      ".#.......",
+      "##.......",
+      "###......",
+      "###.....#",
+      ".####..#.",
+      ".#######.",
+      "...###...",
     }
+    local moon_scale = 2
+    local moon_x = 16
+    local moon_y = 2
 
     screen.level(9)
     for row_index, row in ipairs(moon) do
       for column = 1, #row do
         if row:sub(column, column) == "#" then
-          screen.rect(11 + column, 1 + row_index, 1, 1)
+          screen.rect(
+            moon_x + (column - 1) * moon_scale,
+            moon_y + (row_index - 1) * moon_scale,
+            moon_scale,
+            moon_scale
+          )
         end
       end
     end
