@@ -1,5 +1,69 @@
 local Render = {}
 
+local SCREEN_W = 128
+local SCREEN_H = 64
+local HORIZON_Y = 16
+local HOOK_X = 64
+
+local SPRITES = {
+  square = {
+    ".###.........###.",
+    "###...........###",
+    "##.............##",
+    "##.#.###.###.#.##",
+    "####.###.###.####",
+    "#.....##.##.....#",
+    "#....#######....#",
+    "#..###.###.###..#",
+    "#####.#####.#####",
+    "#####.#####.#####",
+    "..#############..",
+    "...###########...",
+    "....#########....",
+    ".###.#######.###.",
+    "#...#.......#...#",
+    "#..#.........#..#",
+    "#..#.........#..#",
+  },
+  circle = {
+    "......###########",
+    ".....#######.....",
+    "....#########....",
+    "...######.#.##...",
+    "...####.##.#.#...",
+    "...######.#.##...",
+    "#..#.##.####.#..#",
+    "#..#.##.##.#.#.##",
+    "#######......####",
+    "#######......####",
+    "...####......#.##",
+    "...###.......#..#",
+    "...#.........#...",
+    "...#........#....",
+    "....########.....",
+    ".....#####.......",
+    "......#########..",
+  },
+  triangle = {
+    "......#####......",
+    ".....#######.....",
+    ".....#######.....",
+    ".....#######.....",
+    ".....#.###.#.....",
+    "...#.#######.#...",
+    "..#..###.###..#..",
+    "..#..#######..#..",
+    "..#..#######..#..",
+    "...#.#.....#.#...",
+    "#..#.#...##..#..#",
+    ".##...##.##...##.",
+    "......##...##....",
+    "..#...#......#...",
+    "...###.......#...",
+    "............#....",
+  },
+}
+
 local function clamp(value, lo, hi)
   if value < lo then
     return lo
@@ -10,143 +74,221 @@ local function clamp(value, lo, hi)
   return value
 end
 
-local function world_to_y(depth, view_top, view_span, top, bottom)
-  local t = (depth - view_top) / view_span
-  return top + (bottom - top) * t
+local function depth_to_y(depth)
+  return HORIZON_Y + 4 + clamp(depth, 0, 1) * (SCREEN_H - HORIZON_Y - 8)
 end
 
 local function fish_to_x(value)
-  return 8 + clamp(value, 0, 1) * 112
+  return 10 + clamp(value, 0, 1) * 108
 end
 
-local function draw_dither(view_top, view_span, top, bottom)
-  for y = top, bottom, 3 do
-    local world_depth = clamp(view_top + ((y - top) / (bottom - top)) * view_span, 0, 1)
-    local spacing = math.max(7, 22 - math.floor(world_depth * 9))
-    local level = 1 + math.floor(world_depth * 3)
-    local phase = (y + math.floor(world_depth * 127)) % spacing
+local function sprite_width(sprite)
+  local w = 0
+  for _, row in ipairs(sprite) do
+    w = math.max(w, #row)
+  end
+  return w
+end
 
-    screen.level(level)
-    for x = 1 - phase, 127, spacing do
-      if x >= 1 then
-        screen.rect(x, y, 1, 1)
-      end
-      if world_depth > 0.62 and x + 5 >= 1 and x + 5 < 128 and (x + y) % 5 == 0 then
-        screen.rect(x + 5, y + 1, 1, 1)
-      end
-      if world_depth > 0.82 and x + 2 >= 1 and x + 2 < 128 and (x + y) % 7 == 0 then
-        screen.rect(x + 2, y + 2, 1, 1)
+local function draw_sprite(sprite, cx, cy, level)
+  local w = sprite_width(sprite)
+  local h = #sprite
+  local x0 = math.floor(cx - w * 0.5)
+  local y0 = math.floor(cy - h * 0.5)
+
+  screen.level(level)
+  for row_index, row in ipairs(sprite) do
+    for column = 1, #row do
+      if row:sub(column, column) == "#" then
+        screen.rect(x0 + column - 1, y0 + row_index - 1, 1, 1)
       end
     end
+  end
+  screen.fill()
+end
+
+local function draw_sky()
+  local stars = {
+    { 8, 7, 5 },
+    { 29, 2, 3 },
+    { 47, 9, 4 },
+    { 83, 5, 6 },
+    { 103, 11, 4 },
+    { 119, 8, 3 },
+  }
+
+  for _, star in ipairs(stars) do
+    screen.level(star[3])
+    screen.rect(star[1], star[2], 1, 1)
     screen.fill()
   end
 end
 
-local function draw_surface(view_top, view_span, top, bottom)
-  if view_top > 0 then
-    return
-  end
+local function draw_sea_line()
+  screen.level(7)
+  screen.move(0, HORIZON_Y)
+  screen.line(SCREEN_W - 1, HORIZON_Y)
+  screen.stroke()
 
-  local y = clamp(world_to_y(0, view_top, view_span, top, bottom), top, bottom)
-  screen.level(10)
-  screen.move(0, y)
-  screen.line(127, y)
+  screen.level(4)
+  for x = 0, SCREEN_W - 1, 6 do
+    screen.rect(x, HORIZON_Y - 1, 1, 1)
+    screen.rect(x + 3, HORIZON_Y + 1, 1, 1)
+  end
+  screen.fill()
+end
+
+local function draw_boat()
+  local y = HORIZON_Y
+
+  screen.level(12)
+  screen.rect(59, y - 6, 10, 2)
+  screen.rect(57, y - 4, 14, 2)
+  screen.fill()
+
+  screen.level(15)
+  screen.move(51, y - 1)
+  screen.line(77, y - 1)
+  screen.line(72, y + 3)
+  screen.line(56, y + 3)
+  screen.line(51, y - 1)
+  screen.stroke()
+
+  screen.level(8)
+  screen.rect(62, y + 2, 2, 5)
+  screen.rect(68, y + 2, 2, 5)
+  screen.fill()
+end
+
+local function draw_bottom_noise()
+  screen.level(3)
+  for x = 0, SCREEN_W - 1, 3 do
+    local y = 61 + ((x * 7) % 3)
+    screen.rect(x, y, 2, 1)
+  end
+  screen.fill()
+
+  screen.level(6)
+  screen.move(0, 63)
+  for x = 0, SCREEN_W - 1, 2 do
+    local y = 62 + ((x * 5) % 2)
+    screen.line(x, y)
+  end
   screen.stroke()
 end
 
 local function draw_hook(x, y, ready)
-  screen.level(ready and 15 or 12)
-  screen.move(x, y - 5)
+  screen.level(ready and 15 or 10)
+  screen.move(x, y - 4)
   screen.line(x, y + 2)
-  screen.line(x + 4, y + 4)
+  screen.line(x + 3, y + 4)
   screen.stroke()
   screen.circle(x, y, ready and 2 or 1)
   screen.fill()
 end
 
-local function draw_fish_signal(x, y, level, signal, ready)
-  local radius = 2 + clamp(signal, 0, 1) * 8
+local function draw_fish(fish, x, y, signal, ready)
+  local sprite = SPRITES[fish and fish.type or "square"] or SPRITES.square
+  local level = 4 + math.floor(clamp(signal or 0, 0, 1) * 11)
 
-  screen.level(math.max(2, level - 3))
-  screen.circle(x, y, radius)
-  screen.stroke()
-
-  if signal > 0.34 then
-    screen.level(math.max(1, level - 6))
-    screen.circle(x, y, radius + 4)
+  if ready then
+    screen.level(9)
+    screen.circle(x, y, 9)
+    screen.stroke()
+    screen.level(4)
+    screen.circle(x, y, 13)
+    screen.stroke()
+  elseif signal and signal > 0.25 then
+    screen.level(3 + math.floor(signal * 4))
+    screen.circle(x, y, 5 + signal * 6)
     screen.stroke()
   end
 
-  screen.level(level)
-  screen.rect(x - 1, y - 1, 3, 3)
-  screen.fill()
+  draw_sprite(sprite, x, y, level)
+end
 
-  if ready then
-    screen.level(15)
-    screen.rect(x - 2, y - 2, 5, 5)
+local function draw_line_to_hook(game, hook_y)
+  if game.state == "CAST" then
+    return
+  end
+
+  screen.level(9)
+  screen.move(HOOK_X, HORIZON_Y + 3)
+  screen.line(HOOK_X, hook_y)
+  screen.stroke()
+end
+
+local function draw_main_page(game)
+  draw_sky()
+  draw_sea_line()
+  draw_boat()
+
+  if game.state == "CAST" then
+    return
+  end
+
+  draw_bottom_noise()
+
+  local hook_y = clamp(depth_to_y(game.depth), HORIZON_Y + 5, SCREEN_H - 4)
+
+  if game.state == "STRUGGLE" then
+    local fish = game.hooked_fish or game.active_fish
+    local fish_y = clamp(depth_to_y(game.fish_depth), HORIZON_Y + 5, SCREEN_H - 6)
+    local fish_x = fish_to_x(game.fish_x)
+
+    draw_line_to_hook(game, hook_y)
+    screen.level(8)
+    screen.move(HOOK_X, hook_y)
+    screen.line(fish_x, fish_y)
     screen.stroke()
+    draw_hook(HOOK_X, hook_y, false)
+    draw_fish(fish, fish_x, fish_y, game.signal, false)
+    return
+  end
+
+  draw_line_to_hook(game, hook_y)
+  draw_hook(HOOK_X, hook_y, game.bite_ready)
+
+  for _, fish in ipairs(game.fish or {}) do
+    local signal = fish.signal or 0
+    if signal > 0.06 then
+      local fish_y = clamp(depth_to_y(fish.depth), HORIZON_Y + 6, SCREEN_H - 7)
+      local fish_x = fish_to_x(fish.x)
+      local ready = game.bite_ready and game.active_fish == fish
+      draw_fish(fish, fish_x, fish_y, signal, ready)
+    end
   end
 end
 
-local function draw_fish_shape(shape, x, y, level, signal, ready)
-  local radius = 2 + clamp(signal, 0, 1) * 7
+local function small_icon(shape, x, y, active)
+  screen.level(active and 13 or 3)
 
-  screen.level(math.max(1, level - 4))
-  screen.circle(x, y, radius)
-  screen.stroke()
-
-  if ready then
-    screen.level(15)
-    screen.circle(x, y, radius + 3)
-    screen.stroke()
-  end
-
-  screen.level(level)
   if shape == "square" then
     screen.rect(x - 2, y - 2, 5, 5)
-    screen.fill()
+    screen.stroke()
   elseif shape == "circle" then
     screen.circle(x, y, 3)
-    screen.fill()
+    screen.stroke()
   elseif shape == "triangle" then
-    screen.move(x, y - 4)
-    screen.line(x + 4, y + 3)
-    screen.line(x - 4, y + 3)
-    screen.line(x, y - 4)
-    screen.fill()
-  else
-    draw_fish_signal(x, y, level, signal, ready)
-  end
-end
-
-local function draw_ascent_trace(hook_x, fish_y, top)
-  screen.level(3)
-  for y = top, fish_y, 7 do
-    screen.move(hook_x - 2, y)
-    screen.line(hook_x + 2, y)
+    screen.move(x, y - 3)
+    screen.line(x + 3, y + 3)
+    screen.line(x - 3, y + 3)
+    screen.line(x, y - 3)
     screen.stroke()
   end
 end
 
-local function draw_loop_slots(captured_by_type)
+local function draw_loop_slots(captured_by_type, y)
   local slots = {
-    { type = "square", x = 9, max = 1 },
-    { type = "circle", x = 20, max = 2 },
-    { type = "triangle", x = 42, max = 2 },
+    { type = "square", x = 75, max = 1 },
+    { type = "circle", x = 90, max = 2 },
+    { type = "triangle", x = 113, max = 2 },
   }
 
   for _, slot in ipairs(slots) do
     local layers = captured_by_type and captured_by_type[slot.type] or {}
     for index = 1, slot.max do
-      local active = layers[index] ~= nil
-      draw_fish_shape(
-        slot.type,
-        slot.x + ((index - 1) * 9),
-        45,
-        active and 12 or 3,
-        active and 0.9 or 0.0,
-        false
-      )
+      small_icon(slot.type, slot.x + ((index - 1) * 10), y, layers[index] ~= nil)
     end
   end
 end
@@ -174,104 +316,67 @@ local function marked_bar(x, y, w, h, value, mark_min, mark_max)
   end
 end
 
-function Render.redraw(game, drone, genesis)
+local function draw_hud_page(game, drone, genesis)
+  local depth_m = math.floor((game.depth or 0) * (game.config.MAX_DEPTH_M or 420))
+  local genesis_label = "fallback"
+
+  if genesis and genesis:is_connected() then
+    genesis_label = "genesis"
+  elseif genesis and genesis:is_open() then
+    genesis_label = "serial"
+  end
+
+  screen.level(15)
+  screen.move(2, 8)
+  screen.text(game.state)
+
+  draw_loop_slots(game.captured_by_type, 8)
+
+  screen.level(9)
+  screen.move(2, 19)
+  screen.text(string.format("depth %03dm", depth_m))
+  marked_bar(58, 13, 66, 7, game.depth or 0)
+
+  screen.level(9)
+  screen.move(2, 31)
+  screen.text("signal")
+  marked_bar(58, 25, 66, 7, game.signal or 0)
+
+  screen.level(9)
+  screen.move(2, 43)
+  screen.text("tension")
+  marked_bar(
+    58,
+    37,
+    66,
+    7,
+    game.tension or 0,
+    game.config.SAFE_TENSION_MIN,
+    game.config.SAFE_TENSION_MAX
+  )
+
+  screen.level(9)
+  screen.move(2, 55)
+  screen.text("catch")
+
+  screen.level(5)
+  screen.move(2, 63)
+  screen.text(genesis_label)
+  marked_bar(58, 55, 66, 7, game.capture_progress or 0)
+end
+
+function Render.redraw(game, drone, genesis, page)
   if screen == nil then
     return
   end
 
   screen.clear()
 
-  local top = 12
-  local bottom = 50
-  local view_span = game.config.CAMERA_DEPTH_SPAN or 0.16
-  local view_top = clamp(game.depth - view_span * 0.55, 0, 1 - view_span)
-  local hook_x = 64
-  local hook_y = clamp(world_to_y(game.depth, view_top, view_span, top, bottom), top, bottom)
-  local page = math.floor(game.depth / view_span) + 1
-  local depth_m = math.floor(game.depth * (game.config.MAX_DEPTH_M or 420))
-
-  draw_dither(view_top, view_span, top, bottom)
-  draw_surface(view_top, view_span, top, bottom)
-
-  screen.level(15)
-  screen.move(2, 8)
-  screen.text(game.state)
-
-  screen.level(7)
-  screen.move(76, 8)
-  screen.text(string.format("%03dm p%d", depth_m, page))
-
-  if game.state == "STRUGGLE" then
-    local fish = game.hooked_fish or game.active_fish
-    local fish_y = clamp(world_to_y(game.fish_depth, view_top, view_span, top, bottom), top, bottom)
-    local fish_x = fish_to_x(game.fish_x)
-    draw_ascent_trace(hook_x, fish_y, top)
-    screen.level(11)
-    screen.move(hook_x, top)
-    screen.line(hook_x, hook_y)
-    screen.line(fish_x, fish_y)
-    screen.stroke()
-    draw_hook(hook_x, hook_y, false)
-    draw_fish_shape(
-      fish and fish.type or "square",
-      fish_x,
-      fish_y,
-      7 + math.floor(game.signal * 8),
-      game.signal,
-      false
-    )
+  if page == 2 then
+    draw_hud_page(game, drone, genesis)
   else
-    screen.level(12)
-    screen.move(hook_x, top)
-    screen.line(hook_x, hook_y)
-    screen.stroke()
-    draw_hook(hook_x, hook_y, game.bite_ready)
-
-    for _, fish in ipairs(game.fish or {}) do
-      local fish_y = world_to_y(fish.depth, view_top, view_span, top, bottom)
-      if fish_y >= top - 8 and fish_y <= bottom + 8 then
-        local fish_x = fish_to_x(fish.x)
-        local signal = fish.signal or 0
-        local level = 3 + math.floor(signal * 12)
-        local ready = game.bite_ready and game.active_fish == fish
-        draw_fish_shape(fish.type, fish_x, fish_y, level, signal, ready)
-      end
-    end
+    draw_main_page(game)
   end
-
-  if game.state == "STRUGGLE" then
-    screen.level(5)
-    screen.move(5, 53)
-    screen.text("TEN")
-    screen.move(74, 53)
-    screen.text("UP")
-    marked_bar(
-      5,
-      56,
-      56,
-      7,
-      game.tension,
-      game.config.SAFE_TENSION_MIN,
-      game.config.SAFE_TENSION_MAX
-    )
-    marked_bar(74, 56, 49, 7, game.capture_progress)
-  end
-
-  screen.level(6)
-  screen.move(2, 19)
-  screen.text(string.format("S %.2f", game.signal))
-  draw_loop_slots(game.captured_by_type)
-
-  local genesis_label = "G --"
-  if genesis and genesis:is_connected() then
-    genesis_label = "G ok"
-  elseif genesis and genesis:is_open() then
-    genesis_label = "G io"
-  end
-
-  screen.level(genesis and genesis:is_open() and 10 or 3)
-  screen.move(104, 19)
-  screen.text(genesis_label)
 
   screen.update()
 end

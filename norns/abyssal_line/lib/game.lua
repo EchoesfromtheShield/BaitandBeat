@@ -224,6 +224,8 @@ end
 function Game:press()
   if self.state == "CAST" then
     self:_spawn_fish_set()
+    self.line_depth = self.config.CAST_DEPTH or 0.04
+    self.depth = self.line_depth
     self.state = "EXPLORE"
     self.last_reason = "cast"
     return

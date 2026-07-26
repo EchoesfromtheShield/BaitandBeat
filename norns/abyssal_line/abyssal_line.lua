@@ -9,6 +9,7 @@ local Render = include("abyssal_line/lib/render")
 local game = nil
 local genesis = nil
 local redraw_dirty = true
+local display_page = 1
 
 local function norns_fallback_controls()
   return not (genesis and genesis:is_connected())
@@ -45,6 +46,16 @@ function cleanup()
 end
 
 function enc(n, delta)
+  if n == 1 and game then
+    if delta > 0 then
+      display_page = 2
+    elseif delta < 0 then
+      display_page = 1
+    end
+    redraw_dirty = true
+    return
+  end
+
   if n == 3 and game and norns_fallback_controls() then
     game:encoder(delta)
     redraw_dirty = true
@@ -63,6 +74,6 @@ function redraw()
     return
   end
 
-  Render.redraw(game, Music.drone_params(game), genesis)
+  Render.redraw(game, Music.drone_params(game), genesis, display_page)
   redraw_dirty = false
 end

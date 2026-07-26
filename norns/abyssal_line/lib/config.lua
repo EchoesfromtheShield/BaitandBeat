@@ -2,6 +2,7 @@ local Config = {}
 
 Config.TICK_S = 1 / 15
 Config.DEPTH_STEP = 0.008
+Config.CAST_DEPTH = 0.04
 Config.EXPLORE_DEPTH_STEP = 0.008
 Config.STRUGGLE_DEPTH_STEP = 0.004
 Config.STRUGGLE_EDGE_GAIN = 0.28
