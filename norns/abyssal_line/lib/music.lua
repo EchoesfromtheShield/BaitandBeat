@@ -9,6 +9,7 @@ local drone_send_t = 0
 local preview_latch = {}
 local loop_state = {}
 local TIMBRE_FAMILIES = 8
+local CAPTURE_HANDOFF_STEPS = 24
 local MOTION_MOD_SCALE = {
   square = { x = 0.16, y = 0.10 },
   circle = { x = 0.12, y = 0.08 },
@@ -159,17 +160,43 @@ local function timbre(fish, salt)
   return clamp((family + color) / TIMBRE_FAMILIES, 0, 0.999)
 end
 
+local function drum_timbre(fish, variant, mode, step)
+  local raw = timbre(fish, variant.timbre + mode * 13)
+  local step_color = seeded((fish and fish.pattern_seed or 1) + step16 * 17, 125 + mode + step) * 0.18
+
+  if mode == 0 then
+    return clamp(0.08 + raw * 0.18 + step_color * 0.35, 0.06, 0.30)
+  elseif mode == 1 then
+    return clamp(0.20 + raw * 0.34 + step_color * 0.55, 0.16, 0.58)
+  end
+
+  return clamp(0.14 + raw * 0.30 + step_color * 0.45, 0.10, 0.48)
+end
+
 local function movement_from_fish(fish)
   if fish and fish.loop_key then
     local y = clamp(fish.mod_y or 0.5, 0, 1)
+    local handoff = clamp(fish.handoff_0_1 or 0, 0, 1)
+    local x_motion = 0
+    local y_motion = 0
 
     if fish.type == "square" then
-      return y * 0.18, 0
+      x_motion = y * 0.18
+      y_motion = 0
     elseif fish.type == "circle" then
-      return y, y
+      x_motion = y
+      y_motion = y
     elseif fish.type == "triangle" then
-      return y * 0.35, 0
+      x_motion = y * 0.35
+      y_motion = 0
     end
+
+    if handoff > 0 then
+      x_motion = x_motion * (1 - handoff) + clamp(fish.capture_motion_x or x_motion, 0, 1) * handoff
+      y_motion = y_motion * (1 - handoff) + clamp(fish.capture_motion_y or y_motion, 0, 1) * handoff
+    end
+
+    return x_motion, y_motion
   end
 
   local scale = MOTION_MOD_SCALE[fish and fish.type] or { x = 0.10, y = 0.08 }
@@ -281,20 +308,15 @@ local function square_step(fish, amp_scale)
 
   local amp = base_amp * accent * (amp_scale or 1)
   local motion_x, motion_y = movement_from_fish(fish)
-  local drum_timbre = clamp(
-    timbre(fish, variant.timbre + mode * 13) + fish_step_seed(fish, 125 + mode + bar_step) * 0.16 - 0.08,
-    0,
-    0.999
-  )
-  fish_event(mode, note, drum_timbre, amp, pan_from_fish(fish), motion_x, motion_y)
+  fish_event(mode, note, drum_timbre(fish, variant, mode, bar_step), amp, pan_from_fish(fish), motion_x, motion_y)
 
   if section == dense_section and mode == 2 and fish_step_seed(fish, 40 + bar_step) < 0.36 then
     delayed_fish_event(
       1 / 8,
       2,
       scale_hz(current_game, 3 + (bar_step % 3), 1),
-      timbre(fish, 44),
-      amp * 0.46,
+      drum_timbre(fish, variant, 2, bar_step + 17),
+      amp * 0.34,
       pan_from_fish(fish) * -0.6,
       motion_x,
       motion_y
@@ -476,7 +498,8 @@ end
 
 local function trigger_preview(fish)
   if fish.type == "square" then
-    fish_event(2, scale_hz(current_game, 1, 1), timbre(fish, 30), 0.88, pan_from_fish(fish), 0, 0)
+    local variant = choice(fish.pattern_seed, 2, DRUM_VARIANTS)
+    fish_event(0, scale_hz(current_game, 1, 0), drum_timbre(fish, variant, 0, 0), 0.95, pan_from_fish(fish), 0, 0)
   elseif fish.type == "circle" then
     fish_event(3, scale_hz(current_game, arp_degree(fish, 0), 1), timbre(fish, 32), 0.62, pan_from_fish(fish), 0, 0)
   elseif fish.type == "triangle" then
@@ -513,7 +536,18 @@ end
 local function update_loops()
   for _, layer in pairs(loop_state) do
     local volume = clamp(layer.volume_0_1 or 0.85, 0, 1)
-    run_fish_step(layer, (0.62 + (layer.loop_amp or 0)) * volume)
+    local handoff = 0
+
+    if layer.handoff_steps and layer.handoff_steps > 0 then
+      handoff = clamp(layer.handoff_steps / math.max(1, layer.handoff_total_steps or CAPTURE_HANDOFF_STEPS), 0, 1)
+      layer.handoff_steps = layer.handoff_steps - 1
+    else
+      layer.handoff_steps = nil
+      layer.handoff_total_steps = nil
+    end
+
+    layer.handoff_0_1 = handoff
+    run_fish_step(layer, (0.62 + (layer.loop_amp or 0)) * volume * (0.42 + (1 - handoff) * 0.58))
   end
 end
 
@@ -619,6 +653,13 @@ function Music.capture_loop(event)
   end
 
   local loop_key = layer.loop_key or string.format("%s:%s", fish_type, tostring(layer.pattern_seed or fish.pattern_seed or 1))
+  local motion_scale = MOTION_MOD_SCALE[fish_type] or { x = 0.10, y = 0.08 }
+  local capture_motion_x = clamp((fish.motion_x or 0) * motion_scale.x, 0, 1)
+  local capture_motion_y = clamp((fish.motion_y or 0) * motion_scale.y, 0, 1)
+
+  if fish_type == "square" then
+    capture_motion_y = clamp(capture_motion_y, 0, 0.025)
+  end
 
   loop_state[loop_key] = {
     id = layer.pattern_seed or fish.pattern_seed or 1,
@@ -633,6 +674,11 @@ function Music.capture_loop(event)
     volume_0_1 = layer.volume_0_1 or 0.85,
     mod_x = layer.mod_x or 0.5,
     mod_y = layer.mod_y or 0.5,
+    capture_motion_x = capture_motion_x,
+    capture_motion_y = capture_motion_y,
+    handoff_steps = CAPTURE_HANDOFF_STEPS,
+    handoff_total_steps = CAPTURE_HANDOFF_STEPS,
+    handoff_0_1 = 1,
     loop_amp = clamp((layer.avg_tension or 0.4) * 0.35 + (layer.max_tension or 0.5) * 0.25, 0, 0.55),
   }
 end
