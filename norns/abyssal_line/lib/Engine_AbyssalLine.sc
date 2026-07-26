@@ -38,6 +38,7 @@ Engine_AbyssalLine : CroneEngine {
 			var fishCutoff;
 			var fishRq;
 			var tide;
+			var padPresence;
 			var sig;
 
 			drift = LFNoise1.kr([0.018, 0.023, 0.031, 0.037, 0.043, 0.051]).range(-0.0025, 0.0025);
@@ -79,7 +80,8 @@ Engine_AbyssalLine : CroneEngine {
 
 			tide = SinOsc.kr(0.014 + depthLag * 0.034, [0, pi]).range(0.88, 1);
 
-			sig = (pad * (1.00 + signalLag * 0.08)) + (fishVoice * 1.05);
+			padPresence = (signalLag * 0.08) + (fishLag * 0.12);
+			sig = (pad * padPresence) + (fishVoice * 1.35);
 			sig = LeakDC.ar(sig);
 			sig = FreeVerb2.ar(sig[0], sig[1], 0.26 + depthLag * 0.08, 0.88, 0.72);
 			deepDamp = depthLag.linexp(0, 1, 6200, 1200).clip(950, 6200);
@@ -130,34 +132,34 @@ Engine_AbyssalLine : CroneEngine {
 			var motionX = motion_x.clip(0, 1);
 			var motionY = motion_y.clip(0, 1);
 			var isDrum = Select.kr(safeMode, [1, 1, 1, 0, 0]);
-			var kickDecay = 0.30 + (color * 0.08) + (motionX * 0.010);
+			var kickDecay = 0.22 + (color * 0.18) + (motionX * 0.010);
 			var kickEnv = Env.perc(0.001, kickDecay, 1, -6).kr;
 			var kickPitch = Env.perc(
 				0.001,
-				0.070 + (color * 0.018),
-				58 + (color * 36),
+				0.055 + (color * 0.035),
+				46 + (color * 76),
 				-7
 			).kr;
-			var kickBase = 42 + (color * 6);
-			var kickClick = LPF.ar(HPF.ar(WhiteNoise.ar(Env.perc(0.001, 0.010).kr * 0.035), 1400), 4200);
-			var kick = SinOsc.ar(kickBase + kickPitch, 0, kickEnv * 1.42) +
-				LFTri.ar((kickBase + kickPitch) * 0.5, 0, kickEnv * 0.24) +
+			var kickBase = 36 + (color * 18);
+			var kickClick = LPF.ar(HPF.ar(WhiteNoise.ar(Env.perc(0.001, 0.011 + color * 0.010).kr * (0.025 + color * 0.040)), 1100 + color * 1600), 3600 + color * 4400);
+			var kick = SinOsc.ar(kickBase + kickPitch, 0, kickEnv * (1.24 + color * 0.30)) +
+				LFTri.ar((kickBase + kickPitch) * (0.48 + color * 0.10), 0, kickEnv * (0.20 + color * 0.10)) +
 				kickClick;
-			var snareDecay = 0.12 + (color * 0.22);
+			var snareDecay = 0.09 + (color * 0.28);
 			var snareEnv = Env.perc(0.001, snareDecay, 1, -4).kr;
 			var snareTone = SinOsc.ar(130 + (color * 280), 0, snareEnv * (0.12 + color * 0.20));
 			var snareNoise = BPF.ar(
 				WhiteNoise.ar(snareEnv * (0.38 + color * 0.32)),
-				900 + (color * 2600),
-				0.24 + (color * 0.16)
+				620 + (color * 3900),
+				0.18 + (color * 0.24)
 			);
-			var snareClap = HPF.ar(DelayC.ar(WhiteNoise.ar(snareEnv * 0.10), 0.022, 0.006 + color * 0.010), 1200);
+			var snareClap = HPF.ar(DelayC.ar(WhiteNoise.ar(snareEnv * (0.07 + color * 0.08)), 0.024, 0.004 + color * 0.016), 900 + color * 1500);
 			var snare = snareNoise + snareTone + snareClap;
-			var rimDecay = 0.026 + (color * 0.045);
+			var rimDecay = 0.020 + (color * 0.065);
 			var rimEnv = Env.perc(0.001, rimDecay, 1, -8).kr;
 			var rim = Ringz.ar(
-				BPF.ar(WhiteNoise.ar(rimEnv * (0.10 + color * 0.13)), 1300 + (color * 1800), 0.26),
-				(freq * (1.8 + color * 2.8)).clip(260, 4200),
+				BPF.ar(WhiteNoise.ar(rimEnv * (0.08 + color * 0.16)), 900 + (color * 2800), 0.22 + color * 0.14),
+				(freq * (1.4 + color * 3.6)).clip(220, 4800),
 				rimDecay
 			);
 			var arpOpen = motionX.max(motionY).clip(0, 1);

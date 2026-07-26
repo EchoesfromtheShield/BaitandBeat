@@ -1,10 +1,10 @@
-# ABYSSAL LINE - New Core Concept
+# Bait & Beat - New Core Concept
 
 ## One Sentence
 
-A minimal sonic fishing game where a line explores depth, a drone changes with
-the water column, and hooked creatures generate musical patterns through their
-own struggle.
+A minimal sonic fishing game where a line explores depth, passing fish create
+resonance near the hook, and hooked creatures generate musical patterns through
+their own struggle.
 
 ## Active Principles
 
@@ -18,8 +18,8 @@ own struggle.
 
 1. Cast the line.
 2. Move through depth with the encoder.
-3. Hear the drone change as the line descends or rises.
-4. Detect a hidden creature through resonance in the drone.
+3. Listen for fish resonance as the line descends or rises.
+4. Detect a hidden creature through resonance near the hook.
 5. Hold position in the correct zone until the bite.
 6. Press to hook.
 7. Use the encoder to keep line tension in the playable range.
@@ -32,7 +32,7 @@ own struggle.
 ### CAST
 
 The line is not yet in the water. Audio is sparse or silent. A press casts the
-line and starts the drone.
+line.
 
 ### EXPLORE
 
@@ -42,15 +42,15 @@ The encoder directly changes line depth.
 - Negative delta reels in line and moves shallower.
 - No delta holds the current depth.
 
-Depth continuously changes the drone. The mapping should feel like moving
-through water strata, not like a simple pitch slider.
+Explore itself stays quiet. The player listens for fish resonance when a
+creature crosses the hook.
 
 ### RESONANCE
 
-One hidden creature lives around a target depth. When the line enters its
-field, the drone is contaminated by the creature signal. Standing near the
-correct depth makes the signal clearer. Holding still in the bite zone arms the
-bite.
+One hidden creature lives around a target depth. When the line enters its field
+and the fish crosses the hook, a resonant fifth voice emerges. Standing near
+the correct depth makes the signal clearer. Holding still in the bite zone arms
+the bite.
 
 ### STRUGGLE
 

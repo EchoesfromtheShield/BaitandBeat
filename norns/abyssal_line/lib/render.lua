@@ -277,6 +277,24 @@ local function draw_fish(fish, x, y, signal, ready)
   draw_sprite(sprite, x, y, level)
 end
 
+local function draw_status_message(game)
+  if not game.message or game.message == "" or not game.message_timer or game.message_timer <= 0 then
+    return
+  end
+
+  screen.level(15)
+  local split_at = string.find(game.message, "|", 1, true)
+  if split_at then
+    screen.move(2, 55)
+    screen.text(string.sub(game.message, 1, split_at - 1))
+    screen.move(2, 63)
+    screen.text(string.sub(game.message, split_at + 1))
+  else
+    screen.move(2, 63)
+    screen.text(game.message)
+  end
+end
+
 local function draw_line_to_hook(game, line_x, start_y, hook_y)
   if game.state == "CAST" or game.state == "SURFACE" then
     return
@@ -303,6 +321,7 @@ local function draw_main_page(game)
   end
 
   if game.state == "CAST" or game.state == "SURFACE" then
+    draw_status_message(game)
     return
   end
 
@@ -377,7 +396,7 @@ local function draw_loop_slots(captured_by_type, y)
   end
 end
 
-local function marked_bar(x, y, w, h, value, mark_min, mark_max)
+local function marked_bar(x, y, w, h, value, mark_min, mark_max, fail_min, fail_max)
   local fill_w = math.floor((w - 2) * clamp(value, 0, 1))
 
   screen.level(4)
@@ -396,6 +415,17 @@ local function marked_bar(x, y, w, h, value, mark_min, mark_max)
     screen.line(min_x, y + h + 1)
     screen.move(max_x, y - 2)
     screen.line(max_x, y + h + 1)
+    screen.stroke()
+  end
+
+  if fail_min and fail_max then
+    local fail_min_x = x + 1 + math.floor((w - 2) * clamp(fail_min, 0, 1))
+    local fail_max_x = x + 1 + math.floor((w - 2) * clamp(fail_max, 0, 1))
+    screen.level(7)
+    screen.move(fail_min_x, y - 1)
+    screen.line(fail_min_x, y + h)
+    screen.move(fail_max_x, y - 1)
+    screen.line(fail_max_x, y + h)
     screen.stroke()
   end
 end
@@ -577,7 +607,9 @@ local function draw_struggle_page(game)
     6,
     game.tension or 0,
     game.config.SAFE_TENSION_MIN,
-    game.config.SAFE_TENSION_MAX
+    game.config.SAFE_TENSION_MAX,
+    game.config.SLACK_TENSION,
+    game.config.OVERLOAD_TENSION
   )
   marked_bar(6, 58, 116, 5, game.capture_progress or 0)
 end
@@ -594,6 +626,28 @@ local function draw_loop_ui_page(game, ui)
   end
 end
 
+local function draw_instructions_page()
+  screen.level(15)
+  screen.move(2, 8)
+  screen.text("BAIT & BEAT")
+
+  screen.level(8)
+  screen.move(2, 18)
+  screen.text("A fishing game for Norns")
+  screen.move(2, 27)
+  screen.text("by Echoes from")
+  screen.move(2, 36)
+  screen.text("the Shield.")
+
+  screen.level(6)
+  screen.move(2, 47)
+  screen.text("P1 K3 cast E3 line")
+  screen.move(2, 56)
+  screen.text("P2 E3 fish E2 mode")
+  screen.move(2, 63)
+  screen.text("K3 select/back")
+end
+
 function Render.redraw(game, drone, genesis, page, ui)
   if screen == nil then
     return
@@ -603,7 +657,9 @@ function Render.redraw(game, drone, genesis, page, ui)
 
   render_frame = render_frame + 1
 
-  if page == 2 and game.state == "STRUGGLE" then
+  if page == 0 then
+    draw_instructions_page()
+  elseif page == 2 and game.state == "STRUGGLE" then
     draw_struggle_page(game)
   elseif page == 2 then
     draw_loop_ui_page(game, ui)

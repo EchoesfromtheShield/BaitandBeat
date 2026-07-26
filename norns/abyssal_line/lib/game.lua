@@ -59,15 +59,6 @@ local function pattern_at(t)
   return PULL_PATTERN[#PULL_PATTERN], #PULL_PATTERN
 end
 
-local function struggle_gain(config, tension)
-  local safe_mid = (config.SAFE_TENSION_MIN + config.SAFE_TENSION_MAX) * 0.5
-  local span = math.max(safe_mid - config.SLACK_TENSION, config.OVERLOAD_TENSION - safe_mid)
-  local edge_distance = clamp(math.abs(tension - safe_mid) / span, 0, 1)
-  local center_weight = 1 - edge_distance
-  local edge_gain = config.STRUGGLE_EDGE_GAIN or 0.28
-  return edge_gain + (1 - edge_gain) * center_weight * center_weight
-end
-
 local function rand_range(lo, hi)
   return lo + math.random() * (hi - lo)
 end
@@ -119,6 +110,9 @@ function Game.new(config)
     fight_tension_samples = 0,
     fight_max_tension = 0.0,
     capture_progress = 0.0,
+    tension_control = 0.46,
+    message = "",
+    message_timer = 0,
     captured_by_type = {},
     captured_layers = {},
     captured_events = {},
@@ -132,6 +126,11 @@ end
 
 function Game:_queue(event)
   table.insert(self.pending_events, event)
+end
+
+function Game:_set_message(message)
+  self.message = message or ""
+  self.message_timer = self.config.MESSAGE_HOLD_S or 2.2
 end
 
 function Game:_rebuild_captured_layers()
@@ -286,11 +285,16 @@ function Game:encoder(delta)
     return
   end
 
-  local step = self.config.EXPLORE_DEPTH_STEP or self.config.DEPTH_STEP
   if self.state == "STRUGGLE" then
-    local base = self.config.STRUGGLE_DEPTH_STEP or step
-    step = base * struggle_gain(self.config, self.tension)
+    self.tension_control = clamp(
+      (self.tension_control or self.tension or 0.46) + delta * (self.config.STRUGGLE_TENSION_STEP or 0.045),
+      0,
+      1
+    )
+    return
   end
+
+  local step = self.config.EXPLORE_DEPTH_STEP or self.config.DEPTH_STEP
 
   self.line_depth = clamp(self.line_depth + delta * step, 0, 1)
   self.depth = self.line_depth
@@ -298,6 +302,8 @@ end
 
 function Game:press()
   if self.state == "CAST" then
+    self.message = ""
+    self.message_timer = 0
     self:_spawn_fish_set()
     self.line_depth = self.config.CAST_DEPTH or 0.04
     self.depth = self.line_depth
@@ -340,6 +346,8 @@ function Game:press()
     self.fight_tension_samples = 0
     self.fight_max_tension = 0
     self.capture_progress = 0
+    self.tension_control = (self.config.SAFE_TENSION_MIN + self.config.SAFE_TENSION_MAX) * 0.5
+    self.tension = self.tension_control
     self.last_reason = "hooked"
     self:_focus_fish(fish)
     return
@@ -367,6 +375,7 @@ function Game:reset_to_explore()
   self.fight_tension_samples = 0
   self.fight_max_tension = 0
   self.capture_progress = 0
+  self.tension_control = 0.46
 end
 
 function Game:_return_to_cast(reason)
@@ -388,6 +397,7 @@ function Game:_return_to_cast(reason)
   self.overload_timer = 0
   self.surface_timer = 0
   self.capture_progress = 0
+  self.tension_control = 0.46
   self.last_reason = reason
 end
 
@@ -410,6 +420,7 @@ function Game:_return_to_surface(reason)
   self.overload_timer = 0
   self.surface_timer = self.config.SURFACE_HOLD_S or 0.45
   self.capture_progress = 0
+  self.tension_control = 0.46
   self.last_reason = reason
 end
 
@@ -510,6 +521,13 @@ end
 
 function Game:_fail_to_explore(events, reason)
   self:_return_to_cast(reason)
+  if reason == "escaped_slack" then
+    self:_set_message("Slack line|Fish lost!")
+  elseif reason == "line_broken" then
+    self:_set_message("Line snapped|Fish lost!")
+  else
+    self:_set_message("Fish lost!")
+  end
   table.insert(events, { type = "failure", name = reason })
 end
 
@@ -547,6 +565,25 @@ function Game:_update_struggle(dt, events)
     end
   end
 
+  local ascent_depth = fish.hooked_depth * (1 - self.capture_progress)
+  local pull_offset = item.pull * 0.18
+  local target = clamp(ascent_depth + pull_offset, 0, 1)
+  fish.fish_depth = fish.fish_depth + (target - fish.fish_depth) * 0.18
+  fish.motion_x = clamp(math.abs(fish.x - previous_x) / math.max(dt * 0.42, 0.0001), 0, 1)
+  fish.motion_y = clamp(math.abs(fish.fish_depth - previous_y) / math.max(dt * 0.18, 0.0001), 0, 1)
+  self.fish_depth = fish.fish_depth
+  self.tension = clamp(
+    (self.tension_control or 0.46)
+      + item.pull * (self.config.STRUGGLE_PULL_TENSION or 0.34)
+      + fish.motion_x * 0.030
+      + fish.motion_y * 0.050,
+    0,
+    1
+  )
+  self.fight_tension_sum = self.fight_tension_sum + self.tension
+  self.fight_tension_samples = self.fight_tension_samples + 1
+  self.fight_max_tension = math.max(self.fight_max_tension, self.tension)
+
   if self.tension >= self.config.SAFE_TENSION_MIN
       and self.tension <= self.config.SAFE_TENSION_MAX then
     self.capture_progress = clamp(
@@ -555,18 +592,6 @@ function Game:_update_struggle(dt, events)
       1
     )
   end
-
-  local ascent_depth = fish.hooked_depth * (1 - self.capture_progress)
-  local pull_offset = item.pull * 0.18
-  local target = clamp(ascent_depth + pull_offset, 0, 1)
-  fish.fish_depth = fish.fish_depth + (target - fish.fish_depth) * 0.18
-  fish.motion_x = clamp(math.abs(fish.x - previous_x) / math.max(dt * 0.42, 0.0001), 0, 1)
-  fish.motion_y = clamp(math.abs(fish.fish_depth - previous_y) / math.max(dt * 0.18, 0.0001), 0, 1)
-  self.fish_depth = fish.fish_depth
-  self.tension = clamp(math.abs(fish.fish_depth - self.line_depth) * 2.6, 0, 1)
-  self.fight_tension_sum = self.fight_tension_sum + self.tension
-  self.fight_tension_samples = self.fight_tension_samples + 1
-  self.fight_max_tension = math.max(self.fight_max_tension, self.tension)
 
   if self.tension < self.config.SLACK_TENSION then
     self.slack_timer = self.slack_timer + dt
@@ -586,8 +611,7 @@ function Game:_update_struggle(dt, events)
   end
 
   if self.overload_timer >= self.config.OVERLOAD_FAIL_S then
-    self:_return_to_cast("line_broken")
-    table.insert(events, { type = "failure", name = "line_broken" })
+    self:_fail_to_explore(events, "line_broken")
     return
   end
 
@@ -617,6 +641,7 @@ function Game:_update_struggle(dt, events)
     self.captured_by_type[fish.type] = layers
     self:_rebuild_captured_layers()
     self:_return_to_surface("captured")
+    self:_set_message("Fish caught!")
     table.insert(events, {
       type = "surface",
       name = "captured",
@@ -631,6 +656,10 @@ end
 function Game:update(dt)
   local events = self.pending_events
   self.pending_events = {}
+
+  if self.message_timer and self.message_timer > 0 then
+    self.message_timer = math.max(0, self.message_timer - dt)
+  end
 
   if self.state == "EXPLORE" or self.state == "RESONANCE" then
     self:_update_resonance(dt)

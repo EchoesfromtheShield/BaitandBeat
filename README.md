@@ -1,4 +1,4 @@
-# ABYSSAL LINE
+# Bait & Beat
 
 Minimal sonic fishing game for Norns plus Genesis Mini.
 
@@ -6,7 +6,7 @@ This repo intentionally replaces the previous PELAGOS direction. The old
 documents in `sources/` are preserved as read-only reference material only.
 The active concept is:
 
-> Depth shapes the drone. The creature shapes the pattern. The player shapes
+> The line finds resonance. The creature shapes the pattern. The player shapes
 > the tension between them.
 
 ## Current Scope
@@ -14,8 +14,8 @@ The active concept is:
 Implement only the communication spike and a minimal vertical slice:
 
 - `CAST`: cast the line into the sea.
-- `EXPLORE`: Genesis encoder moves the line down, up, or leaves it still.
-- `RESONANCE`: one of three hidden fish contaminates the drone near its depth.
+- `EXPLORE`: the encoder moves the line down, up, or leaves it still.
+- `RESONANCE`: one of three hidden fish adds resonance when it crosses the hook.
 - `STRUGGLE`: the hooked fish role drives a quantized musical pattern.
 - `SURFACE`: the captured fish becomes a persistent loop for its role.
 
@@ -59,11 +59,11 @@ norns/abyssal_line/abyssal_line.lua
 The script now loads the custom `AbyssalLine` SuperCollider engine from
 `norns/abyssal_line/lib/Engine_AbyssalLine.sc`.
 
-The local Norns fallback controls are active only when Genesis is not connected
-or stops responding:
+The local Norns controls are active when Genesis is not connected or stops
+responding:
 
 - `K3`: cast or hook when the bite is ready.
-- `E3`: move the line depth.
+- `E3`: move the line depth; in `STRUGGLE`, push the tension bar left/right.
 
 Genesis hardware code exists for the M0 communication spike. USB serial has
 been verified on the PC and on Norns; the corrected firmware uses Axiometa
@@ -72,10 +72,9 @@ ports P1/P2/P3 for encoder, LED button, and ERM motor.
 When Genesis is connected to the Norns USB host it should appear as
 `/dev/ttyACM0`. The script opens that port at 115200 baud, receives Genesis
 encoder/button input, and streams authoritative `GAME_STATE` and
-`PATTERN_EVENT` messages back to Genesis. The Norns screen shows `G --` when
-the serial device is missing, `G io` when the port is open, and `G ok` after
-the Genesis handshake. When the display shows `G ok`, Genesis owns input and
-the local Norns fallback controls are ignored.
+`PATTERN_EVENT` messages back to Genesis. The current Norns UI is intentionally
+minimal and does not show serial status on the main page. After a Genesis
+handshake, Genesis owns input and the local Norns fallback controls are ignored.
 
 The active musical slice uses the Norns clock at 90 BPM. Each cast creates
 three seeded fish at different depths:

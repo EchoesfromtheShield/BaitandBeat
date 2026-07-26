@@ -24,18 +24,21 @@ Expected device:
 /dev/ttyACM0
 ```
 
-Launch `ABYSSAL LINE` on Norns. The top-right display should show `G io` when
-the port opens and `G ok` after the Genesis `HELLO` handshake.
+Launch `Bait & Beat` on Norns. The current minimal Norns UI does not show
+serial status on the main page, so confirm Genesis connection from behavior or
+logs rather than an on-screen `G ok` indicator.
 
 Expected behavior:
 
 - Genesis button sends cast/hook input.
-- Genesis encoder changes line depth after casting.
+- Genesis encoder changes line depth after casting and pushes the tension bar
+  during `STRUGGLE`.
 - Genesis LED follows `RESONANCE`, `STRUGGLE`, and `SURFACE` state feedback.
 - Genesis motor pulses only when a bite becomes ready and when a capture
   reaches `SURFACE`.
 
-Fallback controls are active only when the display is not `G ok`:
+Fallback controls are active when Genesis is not connected or has not
+completed the handshake:
 
 - `K3`: cast/hook/reset.
-- `E3`: line depth.
+- `E3`: line depth; in `STRUGGLE`, tension bar left/right.

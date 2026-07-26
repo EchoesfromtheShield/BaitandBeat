@@ -14,6 +14,73 @@ local MOTION_MOD_SCALE = {
   circle = { x = 0.12, y = 0.08 },
   triangle = { x = 0.08, y = 0.05 },
 }
+local DRUM_VARIANTS = {
+  {
+    phrase = 64,
+    density = 0.42,
+    kick_prob = 0.92,
+    snare_prob = 0.78,
+    rim_prob = 0.48,
+    kick = { 0, 10 },
+    snare = { 4, 12 },
+    rim = { 3, 7, 11, 15 },
+    timbre = 10,
+  },
+  {
+    phrase = 48,
+    density = 0.52,
+    kick_prob = 0.82,
+    snare_prob = 0.64,
+    rim_prob = 0.62,
+    kick = { 0, 6, 12 },
+    snare = { 8 },
+    rim = { 2, 5, 10, 14 },
+    timbre = 27,
+  },
+  {
+    phrase = 64,
+    density = 0.60,
+    kick_prob = 0.74,
+    snare_prob = 0.70,
+    rim_prob = 0.76,
+    kick = { 0, 8, 14 },
+    snare = { 4, 11 },
+    rim = { 1, 3, 6, 9, 13, 15 },
+    timbre = 43,
+  },
+  {
+    phrase = 80,
+    density = 0.36,
+    kick_prob = 0.88,
+    snare_prob = 0.82,
+    rim_prob = 0.42,
+    kick = { 0, 5 },
+    snare = { 7, 12 },
+    rim = { 2, 4, 10, 14 },
+    timbre = 59,
+  },
+  {
+    phrase = 64,
+    density = 0.56,
+    kick_prob = 0.70,
+    snare_prob = 0.58,
+    rim_prob = 0.86,
+    kick = { 0, 3, 11 },
+    snare = { 6, 14 },
+    rim = { 1, 5, 8, 10, 13, 15 },
+    timbre = 76,
+  },
+}
+local ARP_INTERVAL_SETS = {
+  { 1, 2, 3, 5, 6 },
+  { 1, 3, 5, 6, 8 },
+  { 1, 2, 5, 8, 10 },
+  { 1, 3, 6, 8, 10 },
+  { 1, 5, 6, 8, 11 },
+  { 1, 2, 4, 6, 9 },
+}
+local ARP_STYLES = { "up", "down", "updown", "skip", "outside" }
+local ARP_OCTAVE_SPANS = { 2, 2, 3, 3, 4 }
 
 local function clamp(value, lo, hi)
   if value < lo then
@@ -36,6 +103,16 @@ end
 local function choice(seed, salt, options)
   local index = 1 + math.floor(seeded(seed, salt) * #options)
   return options[clamp(index, 1, #options)]
+end
+
+local function step_in(pattern, step)
+  for _, value in ipairs(pattern) do
+    if value == step then
+      return true
+    end
+  end
+
+  return false
 end
 
 local function has_engine_command(name)
@@ -145,33 +222,39 @@ local function set_clock_bpm(bpm)
 end
 
 local function square_step(fish, amp_scale)
-  local phrase_step = step16 % 64
+  local variant = choice(fish.pattern_seed, 2, DRUM_VARIANTS)
+  local phrase = variant.phrase or 64
+  local phrase_step = step16 % phrase
   local bar_step = step16 % 16
+  local section_count = math.max(1, math.floor(phrase / 16))
   local section = math.floor(phrase_step / 16)
-  local dense_section = math.floor(seeded(fish.pattern_seed, 3) * 4)
-  local sparse_section = (dense_section + 2 + math.floor(seeded(fish.pattern_seed, 4) * 2)) % 4
-  local density = 0.46
+  local dense_section = math.floor(seeded(fish.pattern_seed, 3) * section_count)
+  local sparse_offset = section_count > 1 and (1 + math.floor(seeded(fish.pattern_seed, 4) * (section_count - 1))) or 0
+  local sparse_section = (dense_section + sparse_offset) % section_count
+  local density = variant.density or 0.46
   local events_mod = clamp(fish.mod_x or 0.5, 0, 1)
 
   if section == dense_section then
-    density = 0.88
+    density = math.min(0.92, density + 0.30)
   elseif section == sparse_section then
-    density = 0.18
+    density = math.max(0.12, density - 0.28)
   end
   density = clamp(density * (0.50 + events_mod * 1.15), 0.08, 0.98)
 
   local mode = nil
-  if bar_step == 0 and seeded(fish.pattern_seed + math.floor(step16 / 16), 5) > density * 0.18 then
+  if step_in(variant.kick, bar_step) and fish_step_seed(fish, 5 + bar_step) < variant.kick_prob then
     mode = 0
-  elseif bar_step == 8 and seeded(fish.pattern_seed + math.floor(step16 / 16), 6) > density * 0.08 then
+  elseif step_in(variant.snare, bar_step) and fish_step_seed(fish, 22 + bar_step) < variant.snare_prob then
     mode = 1
-  elseif section == dense_section and (bar_step == 3 or bar_step == 6 or bar_step == 11 or bar_step == 14) then
-    if fish_step_seed(fish, 7 + bar_step) < 0.72 then
+  elseif step_in(variant.rim, bar_step) and fish_step_seed(fish, 37 + bar_step) < variant.rim_prob then
+    mode = 2
+  elseif section == dense_section and bar_step % 2 == 1 then
+    if fish_step_seed(fish, 51 + bar_step) < density * 0.82 then
       mode = 2
     end
-  elseif bar_step % 4 == 2 and fish_step_seed(fish, 8 + bar_step) < density then
+  elseif section ~= sparse_section and bar_step % 4 == 2 and fish_step_seed(fish, 62 + bar_step) < density * 0.64 then
     mode = 2
-  elseif bar_step % 2 == 1 and fish_step_seed(fish, 9 + bar_step) < density * 0.34 then
+  elseif section == sparse_section and bar_step % 8 == 6 and fish_step_seed(fish, 74 + bar_step) < density * 0.35 then
     mode = 2
   end
 
@@ -198,7 +281,12 @@ local function square_step(fish, amp_scale)
 
   local amp = base_amp * accent * (amp_scale or 1)
   local motion_x, motion_y = movement_from_fish(fish)
-  fish_event(mode, note, timbre(fish, 10 + mode), amp, pan_from_fish(fish), motion_x, motion_y)
+  local drum_timbre = clamp(
+    timbre(fish, variant.timbre + mode * 13) + fish_step_seed(fish, 125 + mode + bar_step) * 0.16 - 0.08,
+    0,
+    0.999
+  )
+  fish_event(mode, note, drum_timbre, amp, pan_from_fish(fish), motion_x, motion_y)
 
   if section == dense_section and mode == 2 and fish_step_seed(fish, 40 + bar_step) < 0.36 then
     delayed_fish_event(
@@ -215,26 +303,58 @@ local function square_step(fish, amp_scale)
 end
 
 local function arp_degree(fish, index)
-  local patterns = {
-    { 1, 2, 3, 5, 6, 8, 10, 11, 13, 11, 10, 8, 6, 5, 3, 2 },
-    { 1, 3, 5, 8, 10, 13, 15, 13, 10, 8, 6, 5, 3, 5, 8, 10 },
-    { 1, 5, 8, 10, 13, 10, 8, 5, 3, 6, 10, 13, 17, 13, 10, 6 },
-    { 1, 2, 5, 6, 8, 10, 13, 15, 13, 10, 8, 6, 5, 3, 2, 1 },
-  }
-  local pattern = choice(fish.pattern_seed, 11, patterns)
-  local reverse = seeded(fish.pattern_seed, 12) > 0.76
-  local phase = math.floor(seeded(fish.pattern_seed, 13) * #pattern)
-  local pos = (index + phase) % #pattern
+  local intervals = choice(fish.pattern_seed, 11, ARP_INTERVAL_SETS)
+  local style = choice(fish.pattern_seed, 12, ARP_STYLES)
+  local octaves = choice(fish.pattern_seed, 13, ARP_OCTAVE_SPANS)
+  local source = {}
+  local sequence = {}
 
-  if reverse then
-    pos = (#pattern - 1) - pos
+  for octave = 0, octaves - 1 do
+    for _, degree in ipairs(intervals) do
+      table.insert(source, degree + octave * 5)
+    end
   end
 
-  return pattern[pos + 1]
+  if style == "down" then
+    for i = #source, 1, -1 do
+      table.insert(sequence, source[i])
+    end
+  elseif style == "updown" then
+    for i = 1, #source do
+      table.insert(sequence, source[i])
+    end
+    for i = #source - 1, 2, -1 do
+      table.insert(sequence, source[i])
+    end
+  elseif style == "skip" then
+    for i = 1, #source, 2 do
+      table.insert(sequence, source[i])
+    end
+    for i = 2, #source, 2 do
+      table.insert(sequence, source[i])
+    end
+  elseif style == "outside" then
+    local lo = 1
+    local hi = #source
+    while lo <= hi do
+      table.insert(sequence, source[lo])
+      if hi ~= lo then
+        table.insert(sequence, source[hi])
+      end
+      lo = lo + 1
+      hi = hi - 1
+    end
+  else
+    sequence = source
+  end
+
+  local phase = math.floor(seeded(fish.pattern_seed, 16) * #sequence)
+  local pos = (index + phase) % #sequence
+  return sequence[pos + 1]
 end
 
 local function arp_subdivision(fish)
-  local bucket = math.floor(seeded(fish.pattern_seed, 14) * 3)
+  local bucket = math.floor(seeded(fish.pattern_seed, 24) * 3)
   return clamp(bucket, 0, 2)
 end
 
@@ -531,13 +651,13 @@ function Music.tick(game, events)
     drone_send_t = 0
     local amp = 0.0
     if game.state == "EXPLORE" then
-      amp = 0.42 + drone.pressure_0_1 * 0.06
+      amp = 0.0
     elseif game.state == "RESONANCE" then
-      amp = 0.48 + drone.pressure_0_1 * 0.06 + drone.signal_0_1 * 0.08
+      amp = drone.fish_0_1 > 0.02 and (0.08 + drone.fish_0_1 * 0.64) or 0.0
     elseif game.state == "STRUGGLE" then
-      amp = 0.36 + drone.pressure_0_1 * 0.05
+      amp = 0.0
     elseif game.state == "SURFACE" then
-      amp = 0.30
+      amp = 0.0
     end
     engine.drone(
       drone.root_hz,
