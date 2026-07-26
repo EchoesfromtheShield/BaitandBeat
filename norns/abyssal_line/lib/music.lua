@@ -7,8 +7,8 @@ local clock_id = nil
 local step16 = 0
 local drone_send_t = 0
 local preview_latch = {}
-local preview_burst = nil
 local loop_state = {}
+local TIMBRE_FAMILIES = 8
 
 local function clamp(value, lo, hi)
   if value < lo then
@@ -71,7 +71,10 @@ local function pan_from_fish(fish)
 end
 
 local function timbre(fish, salt)
-  return seeded(fish and fish.timbre_seed or 1, salt)
+  local seed = fish and fish.timbre_seed or 1
+  local family = math.floor(seeded(seed, 1) * TIMBRE_FAMILIES)
+  local color = seeded(seed, salt) * 0.92
+  return clamp((family + color) / TIMBRE_FAMILIES, 0, 0.999)
 end
 
 local function movement_from_fish(fish)
@@ -277,7 +280,7 @@ local function trigger_preview(fish)
   if fish.type == "square" then
     fish_event(2, scale_hz(current_game, 1, 1), timbre(fish, 30), 0.88, pan_from_fish(fish), 0, 0)
   elseif fish.type == "circle" then
-    preview_burst = { fish = fish, remaining = 6, index = 0 }
+    fish_event(3, scale_hz(current_game, arp_degree(fish, 0), 1), timbre(fish, 32), 0.62, pan_from_fish(fish), 0, 0)
   elseif fish.type == "triangle" then
     fish_event(4, scale_hz(current_game, 1, 1), timbre(fish, 31), 0.84, pan_from_fish(fish), 0, 0)
   end
@@ -300,24 +303,6 @@ local function update_preview()
   end
 end
 
-local function update_preview_burst()
-  if not preview_burst or not preview_burst.fish then
-    return
-  end
-
-  local fish = preview_burst.fish
-  local degree = arp_degree(fish, preview_burst.index)
-  local pan = pan_from_fish(fish)
-  fish_event(3, scale_hz(current_game, degree, 1), timbre(fish, 32), 0.50, pan, 0, 0)
-  delayed_fish_event(1 / 8, 3, scale_hz(current_game, arp_degree(fish, preview_burst.index + 1), 1), timbre(fish, 33), 0.36, pan * -0.4, 0, 0)
-  preview_burst.index = preview_burst.index + 1
-  preview_burst.remaining = preview_burst.remaining - 1
-
-  if preview_burst.remaining <= 0 then
-    preview_burst = nil
-  end
-end
-
 local function update_struggle()
   if not current_game or current_game.state ~= "STRUGGLE" then
     return
@@ -337,7 +322,6 @@ local function clock_loop()
   while true do
     clock.sync(1 / 4)
     step16 = step16 + 1
-    update_preview_burst()
     update_preview()
     update_struggle()
     update_loops()
@@ -369,7 +353,6 @@ function Music.init(game)
   step16 = 0
   drone_send_t = 0
   preview_latch = {}
-  preview_burst = nil
   loop_state = {}
 
   if game and game.config.BPM then

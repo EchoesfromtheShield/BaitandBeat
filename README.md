@@ -87,11 +87,21 @@ three seeded fish at different depths:
 Captured loop limits are intentionally small:
 
 - square: one percussive loop;
-- circle: two arpeggiator loops;
-- triangle: two harmony-arc loops.
+- circle: one arpeggiator loop;
+- triangle: one harmony-arc loop.
 
 Hooking a new fish of a full type removes that type's oldest loop immediately;
 if the new fight is lost, the removed loop is still gone.
+
+Each fish has two seeds:
+
+- `pattern_seed`: phrase structure, subdivisions, arpeggio direction, and
+  harmonic interval choices;
+- `timbre_seed`: a stable voice family plus smaller color variations for that
+  fish.
+
+The current SuperCollider engine uses a curated SCLOrk-inspired voice palette
+instead of loading the full SCLOrkSynths quark on Norns.
 
 ## Genesis M0 Hardware Spike
 
