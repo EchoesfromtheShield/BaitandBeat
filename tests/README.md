@@ -7,7 +7,11 @@ useful as a basic state smoke test:
 python tools\simulate_vertical_slice.py
 ```
 
-Then copy or sync `norns/bait_and_beat` to Norns and test locally.
+Then install from Maiden/Matron and test locally:
+
+```text
+;install https://github.com/EchoesfromtheShield/BaitandBeat
+```
 
 Expected behavior:
 

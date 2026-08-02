@@ -13,10 +13,10 @@
 
 engine.name = "BaitAndBeat"
 
-local Config = include("bait_and_beat/lib/config")
-local Game = include("bait_and_beat/lib/game")
-local Music = include("bait_and_beat/lib/music")
-local Render = include("bait_and_beat/lib/render")
+local Config = include("lib/config")
+local Game = include("lib/game")
+local Music = include("lib/music")
+local Render = include("lib/render")
 
 local game = nil
 local redraw_dirty = true

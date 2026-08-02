@@ -8,22 +8,22 @@ harmony arcs can be caught, mixed, modulated, freed, and replaced during play.
 
 ## Norns Install
 
-Copy this folder to Norns:
+From Maiden/Matron:
 
 ```text
-norns/bait_and_beat
+;install https://github.com/EchoesfromtheShield/BaitandBeat
 ```
 
 The script entrypoint is:
 
 ```text
-norns/bait_and_beat/bait_and_beat.lua
+bait_and_beat.lua
 ```
 
 It loads the custom SuperCollider engine:
 
 ```text
-norns/bait_and_beat/lib/Engine_BaitAndBeat.sc
+lib/Engine_BaitAndBeat.sc
 ```
 
 On Norns, the script should appear as `Bait & Beat` with built-in script
@@ -62,7 +62,9 @@ the previous loop out; if the new fight is lost, the old loop remains gone.
 ## Repository
 
 ```text
+bait_and_beat.lua             Norns script entrypoint
+lib/                          Lua modules and SC engine
 docs/                         Design notes
-norns/bait_and_beat/          Norns script, Lua modules, SC engine
+tests/                        Manual Norns test notes
 tools/                        Host-side simulator
 ```
